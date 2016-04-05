@@ -236,6 +236,9 @@ const struct afmt_entry audio_formats[AFMT_NUM_CODECS] =
     /* Opus */
     [AFMT_OPUS] =
         AFMT_ENTRY("Opus", "opus", NULL, get_ogg_metadata,   "opus\0"),
+    /* XMP Module Player */
+    [AFMT_XMP] =
+        AFMT_ENTRY("XMP", "xmp", NULL, get_xmp_metadata, "it\0s3m\0"),
 #endif
 };
 

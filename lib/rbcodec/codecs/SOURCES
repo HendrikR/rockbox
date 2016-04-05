@@ -39,6 +39,7 @@ hes.c
 nsf.c
 sgc.c
 vgm.c
+xmp.c
 #if MEMORYSIZE > 2
 kss.c
 #endif
