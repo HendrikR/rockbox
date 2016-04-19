@@ -216,7 +216,7 @@ void xmp_set_flags(xmp_context, int);
 void xmp_init(xmp_context, int, char **);
 void xmp_deinit(xmp_context);
 void xmp_drv_register(struct xmp_drv_info *);
-int xmp_load_module(xmp_context, char *);
+int xmp_load_module_fd(xmp_context, char *, int fd);
 int xmp_test_module(xmp_context, char *, char *);
 struct xmp_module_info *xmp_get_module_info(xmp_context, struct xmp_module_info *);
 struct xmp_fmt_info *xmp_get_fmt_info(struct xmp_fmt_info **);

@@ -30,6 +30,12 @@
 #include "metadata_parsers.h"
 #include "rbunicode.h"
 #include "codecs/libxmp/include/xmp.h"
+#include "codecs/libxmp/include/driver.h"
+#include "codecs/libxmp/include/convert.h"
+#include "codecs/libxmp/include/loader.h"
+#include "codecs/libxmp/include/synth.h"
+
+#include "codecs/libxmp/include/list.h"
 
 bool get_xmp_metadata(int fd, struct mp3entry* id3)
 {
@@ -39,7 +45,7 @@ bool get_xmp_metadata(int fd, struct mp3entry* id3)
     xmp_init_formats(ctx);
 
     // TODO: Write this function which is like xmp_load_module, but takes a file descriptor instead of a file name.
-    if (xmp_load_module_fd(ctx, fd) < 0) {
+    if (xmp_load_module_fd(ctx, id3->path, fd) < 0) {
 	return false;
     }
     struct xmp_module_info* modinfo = xmp_get_module_info(ctx, NULL);

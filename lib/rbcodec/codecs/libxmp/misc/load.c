@@ -510,8 +510,7 @@ static void split_name(char *s, char **d, char **b)
 	}
 }
 
-
-int xmp_load_module(xmp_context ctx, char *s)
+int xmp_load_module_fd(xmp_context ctx, char *s, int fd)
 {
     FILE *f;
     int i, t;
@@ -526,7 +525,7 @@ int xmp_load_module(xmp_context ctx, char *s)
 
     _D(_D_WARN "s = %s", s);
 
-    if ((f = fopen(s, "rb")) == NULL)
+    if ((f = fdopen(fd, "rb")) == NULL)
 	return -3;
 
     if (fstat(fileno (f), &st) < 0)
@@ -701,7 +700,6 @@ err:
     xmp_unlink_tempfiles();
     return -1;
 }
-
 
 int xmp_enable_format(char *id, int enable)
 {
