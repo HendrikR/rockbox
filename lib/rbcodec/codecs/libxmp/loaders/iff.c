@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "common.h"
-#include "list.h"
+#include "xmp_list.h"
 #include "iff.h"
 
 #include "load.h"

@@ -10,6 +10,7 @@
 
 #define read_int_b(x) read32b(x)
 #define read_word(x) read16l(x)
+#undef DEBUG
 
 /*
 

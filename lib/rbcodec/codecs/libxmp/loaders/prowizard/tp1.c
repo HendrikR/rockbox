@@ -29,7 +29,7 @@ void Depack_TP1 (FILE * in, FILE * out)
 	long Sample_Data_Address;
 	// FILE *in,*out;
 
-#include "ptktable.h"
+#include "ptktable.c"
 
 	if (Save_Status == BAD)
 		return;

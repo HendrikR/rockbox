@@ -32,7 +32,7 @@
 #include "loader.h"
 #include "synth.h"
 
-#include "list.h"
+#include "xmp_list.h"
 
 int pw_enable(char *, int);
 
@@ -508,6 +508,203 @@ static void split_name(char *s, char **d, char **b)
 		*d = strdup("");
 		*b = strdup(s);
 	}
+}
+
+int xmp_load_module(xmp_context ctx, char *s)
+{
+    FILE *f;
+    struct stat st;
+
+    _D(_D_WARN "s = %s", s);
+
+    if ((f = fopen(s, "rb")) == NULL)
+	return -3;
+
+    if (fstat(fileno (f), &st) < 0)
+	goto err;
+
+    if (S_ISDIR(st.st_mode))
+	goto err;
+
+    _D(_D_INFO "decrunch");
+    if ((decrunch((struct xmp_context *)ctx, &f, &s, DECRUNCH_MAX)) < 0)
+	goto err;
+
+    if (fstat(fileno(f), &st) < 0)	/* get size after decrunch */
+	goto err;
+
+    return xmp_load_module_f(ctx, f);
+
+err:
+    fclose(f);
+    xmp_unlink_tempfiles();
+    return -1;
+}
+
+int xmp_load_module_f(xmp_context ctx, FILE* f, char* s) {
+    int i, t;
+    struct stat st;
+    struct xmp_loader_info *li;
+    struct list_head *head;
+    struct xmp_player_context *p = &((struct xmp_context *)ctx)->p;
+    struct xmp_driver_context *d = &((struct xmp_context *)ctx)->d;
+    struct xmp_mod_context *m = &p->m;
+    struct xmp_options *o = &((struct xmp_context *)ctx)->o;
+    uint32 crc = 0;
+
+    split_name(s, &m->dirname, &m->basename);
+
+    _D(_D_INFO "clear mem");
+    xmp_drv_clearmem((struct xmp_context *)ctx);
+
+    /* Reset variables */
+    memset(m->name, 0, XMP_NAMESIZE);
+    memset(m->type, 0, XMP_NAMESIZE);
+    memset(m->author, 0, XMP_NAMESIZE);
+    m->filename = s;		/* For ALM, SSMT, etc */
+    m->size = st.st_size;
+    m->rrate = PAL_RATE;
+    m->c4rate = C4_PAL_RATE;
+    m->volbase = 0x40;
+    m->volume = 0x40;
+    m->vol_table = NULL;
+    /* Reset control for next module */
+    m->flags = o->flags & ~XMP_CTL_FILTER;	/* verify this later */
+    m->quirk = o->quirk;
+    m->comment = NULL;
+
+    m->xxh = calloc(sizeof (struct xxm_header), 1);
+    /* Set defaults */
+    m->xxh->tpo = 6;
+    m->xxh->bpm = 125;
+    m->xxh->chn = 4;
+    m->synth = &synth_null;
+    m->extra = NULL;
+
+    for (i = 0; i < 64; i++) {
+	m->xxc[i].pan = (((i + 1) / 2) % 2) * 0xff;
+	m->xxc[i].vol = 0x40;
+	m->xxc[i].flg = 0;
+    }
+
+    m->verbosity = o->verbosity;
+
+    _D(_D_WARN "load");
+    list_for_each(head, &loader_list) {
+	li = list_entry(head, struct xmp_loader_info, list);
+
+        _D(_D_INFO "check exclusion");
+	if (li->enable == 0)
+	    continue;
+        _D(_D_INFO "not excluded");
+	
+	if (o->verbosity > 3)
+	    report("Test format: %s (%s)\n", li->id, li->name);
+	fseek(f, 0, SEEK_SET);
+   	if ((i = li->test(f, NULL, 0)) == 0) {
+	    if (o->verbosity > 3)
+		report("Identified as %s\n", li->id);
+	    fseek(f, 0, SEEK_SET);
+	    _D(_D_WARN "load format: %s (%s)", li->id, li->name);
+	    if ((i = li->loader((struct xmp_context *)ctx, f, 0) == 0)) {
+		crc = cksum(f);
+	        break;
+	    } else {
+		report("can't load module, possibly corrupted file\n");
+		i = -1;
+		break;
+	    }
+	}
+    }
+
+    fclose(f);
+    xmp_unlink_tempfiles();
+
+    if (i < 0) {
+	free(m->basename);
+	free(m->dirname);
+	free(m->xxh);
+	return i;
+    }
+
+#ifndef __native_client__
+    _xmp_read_modconf((struct xmp_context *)ctx, crc, st.st_size);
+#endif
+
+    for (i = 0; i < 64; i++) {
+	m->xxc[i].cho = o->chorus;	/* set after reading modconf */
+	m->xxc[i].rvb = o->reverb;
+    }
+
+    if (d->description && (i = (strstr(d->description, " [AWE") != NULL))) {
+	xmp_cvt_to16bit((struct xmp_context *)ctx);
+	xmp_cvt_bid2und((struct xmp_context *)ctx);
+    }
+
+    xmp_drv_flushpatch((struct xmp_context *)ctx, crunch_ratio((struct xmp_context *)ctx, i));
+
+    /* Fix cases where the restart value is invalid e.g. kc_fall8.xm
+     * from http://aminet.net/mods/mvp/mvp_0002.lha (reported by
+     * Ralf Hoffmann <ralf@boomerangsworld.de>)
+     */
+    if (m->xxh->rst >= m->xxh->len)
+	m->xxh->rst = 0;
+
+    /* Disable filter if --nofilter is specified */
+    m->flags &= ~(~o->flags & XMP_CTL_FILTER);
+
+    str_adj(m->name);
+    if (!*m->name)
+	strncpy(m->name, m->basename, XMP_NAMESIZE);
+
+    if (o->verbosity > 1) {
+	report("Module looping : %s\n",
+	    m->flags & XMP_CTL_LOOP ? "yes" : "no");
+	report("Period mode    : %s\n",
+	    m->xxh->flg & XXM_FLG_LINEAR ? "linear" : "Amiga");
+    }
+
+    if (o->verbosity > 2) {
+	char * amp_factor[] = { "Normal", "x2", "x4", "x8" };
+	report("Amiga range    : %s\n", m->xxh->flg & XXM_FLG_MODRNG ?
+		"yes" : "no");
+	report("Restart pos    : %d\n", m->xxh->rst);
+	report("Base volume    : %d\n", m->volbase);
+	report("C4 replay rate : %d\n", m->c4rate);
+	report("Channel mixing : %d%% (dynamic pan %s)\n",
+		m->flags & XMP_CTL_REVERSE ? -o->mix : o->mix,
+		m->flags & XMP_CTL_DYNPAN ? "enabled" : "disabled");
+	report("Checksum       : %u %ld\n", crc, st.st_size);
+	report("Volume amplify : %s\n", amp_factor[o->amplify]);
+    }
+
+    if (o->verbosity) {
+	report("Channels       : %d [ ", m->xxh->chn);
+	for (i = 0; i < m->xxh->chn; i++) {
+	    if (m->xxc[i].flg & XXM_CHANNEL_MUTE)
+		report("- ");
+	    else if (m->xxc[i].flg & XXM_CHANNEL_SYNTH)
+		report("S ");
+	    else
+	        report("%x ", m->xxc[i].pan >> 4);
+	}
+	report("]\n");
+    }
+
+    t = _xmp_scan_module((struct xmp_context *)ctx);
+
+    if (o->verbosity) {
+	if (m->flags & XMP_CTL_LOOP)
+	    report ("One loop time  : %dmin%02ds\n",
+		(t + 500) / 60000, ((t + 500) / 1000) % 60);
+	else
+	    report ("Estimated time : %dmin%02ds\n",
+		(t + 500) / 60000, ((t + 500) / 1000) % 60);
+    }
+
+    m->time = t;
+
+    return t;
 }
 
 int xmp_load_module_fd(xmp_context ctx, char *s, int fd)

@@ -7,7 +7,7 @@
 #endif
 
 #include <stdio.h>
-#include "list.h"
+#include "xmp_list.h"
 #include "common.h"
 
 #define MIN_FILE_LENGHT 2048

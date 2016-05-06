@@ -3,7 +3,7 @@
 #define __IFF_H
 
 #include <stdio.h>
-#include "list.h"
+#include "xmp_list.h"
 
 #define IFF_NOBUFFER 0x0001
 

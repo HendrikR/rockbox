@@ -97,7 +97,7 @@ $(WAVPACKLIB) : CODECFLAGS += -O1
 $(WMALIB) : CODECFLAGS += -O2
 $(WMAPROLIB) : CODECFLAGS += -O1
 $(WMAVOICELIB) : CODECFLAGS += -O1
-$(XMPLIB) : CODECFLAGS += -O3
+$(XMPLIB) : CODECFLAGS += -O3 -I$(RBCODECLIB_DIR)/codecs/libxmp/include
 
 # fine-tuning of CODECFLAGS per cpu arch
 ifeq ($(ARCH),arch_arm)

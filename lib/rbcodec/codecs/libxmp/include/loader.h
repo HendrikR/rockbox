@@ -3,7 +3,7 @@
 #define __XMP_LOADER_H
 
 #include <stdio.h>
-#include "list.h"
+#include "xmp_list.h"
 
 struct xmp_loader_info {
 	char *id;

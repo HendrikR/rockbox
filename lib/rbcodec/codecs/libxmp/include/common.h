@@ -169,7 +169,7 @@ struct xmp_ord_info {
 
 /* Context */
 
-#include "list.h"
+#include "xmp_list.h"
 #include "xxm.h"
 
 struct xmp_mod_context {

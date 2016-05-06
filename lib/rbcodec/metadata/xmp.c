@@ -30,17 +30,26 @@
 #include "metadata_parsers.h"
 #include "rbunicode.h"
 #include "codecs/libxmp/include/xmp.h"
-#include "codecs/libxmp/include/driver.h"
-#include "codecs/libxmp/include/convert.h"
-#include "codecs/libxmp/include/loader.h"
-#include "codecs/libxmp/include/synth.h"
+//#include "codecs/libxmp/include/driver.h"
+//#include "codecs/libxmp/include/convert.h"
+//#include "codecs/libxmp/include/loader.h"
+//#include "codecs/libxmp/include/synth.h"
 
-#include "codecs/libxmp/include/list.h"
+//#include "codecs/libxmp/include/list.h"
 
 bool get_xmp_metadata(int fd, struct mp3entry* id3)
 {
-    // TODO
-    xmp_context ctx = xmp_create_context();
+    // TODO: ugly temporary metadata. see below.
+    id3->title = "libxmp test";
+    id3->bitrate = filesize(fd)/1024; // size in kb
+    id3->frequency = 44100;
+    id3->length = 10*1000;
+    id3->vbr = false;
+    id3->filesize = filesize(fd);
+    
+    // TODO: this would be the good variant, but does not work because of unsuitable makefiles
+    //xmp_context ctx = xmp_create_context();
+    /*
     xmp_init(ctx, 0, NULL);
     xmp_init_formats(ctx);
 
@@ -50,14 +59,16 @@ bool get_xmp_metadata(int fd, struct mp3entry* id3)
     }
     struct xmp_module_info* modinfo = xmp_get_module_info(ctx, NULL);
     id3->title = modinfo->name;
-    id3->bitrate = filesize(fd)/1024; /* size in kb */
+    id3->bitrate = filesize(fd)/1024; // size in kb
     id3->frequency = 44100;
     id3->length = modinfo->time;
     id3->vbr = false;
     id3->filesize = filesize(fd);
+    */
 
+    /*
     xmp_deinit_formats(ctx);
     xmp_deinit(ctx);
-    
+    */
     return true;
 }

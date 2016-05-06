@@ -11,7 +11,7 @@
 #endif
 
 #include "load.h"
-#include "list.h"
+#include "xmp_list.h"
 
 #define TEST_SIZE 1500
 
