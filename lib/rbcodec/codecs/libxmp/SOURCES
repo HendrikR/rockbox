@@ -152,8 +152,6 @@ depackers/arcfs.c
 depackers/readlzw.c
 depackers/muse.c
 format.c
-win32/ptpopen.c
-win32/debug.c
 mkstemp.c
 hmn_extras.c
 control.c
