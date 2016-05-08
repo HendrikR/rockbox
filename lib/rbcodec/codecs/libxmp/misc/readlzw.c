@@ -20,10 +20,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include "readrle.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readrle.h"
 
-#include "common.h"
-#include "readlzw.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readlzw.h"
 
 
 /* now this is for the string table.

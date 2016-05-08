@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 int report(char *fmt, ...)
 {

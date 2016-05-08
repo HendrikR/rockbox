@@ -12,8 +12,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "common.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 #include <math.h>
 

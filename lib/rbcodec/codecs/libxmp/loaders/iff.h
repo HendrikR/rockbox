@@ -3,7 +3,7 @@
 #define __IFF_H
 
 #include <stdio.h>
-#include "xmp_list.h"
+#include "../lib/rbcodec/codecs/libxmp/include/list.h"
 
 #define IFF_NOBUFFER 0x0001
 

@@ -11,7 +11,7 @@
 #endif
 
 #include "load.h"
-#include "readlzw.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readlzw.h"
 
 
 static int sym_test(FILE *, char *, const int);

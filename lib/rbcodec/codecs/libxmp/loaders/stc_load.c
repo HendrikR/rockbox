@@ -11,8 +11,8 @@
 #endif
 
 #include "load.h"
-#include "period.h"
-#include "spectrum.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/spectrum.h"
 
 /* ZX Spectrum Sound Tracker loader
  * Sound Tracker written by Jarek Burczynski (Bzyk), 1990

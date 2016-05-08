@@ -30,11 +30,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "driver.h"
-#include "period.h"
-#include "effects.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/effects.h"
 #include "player.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 
 /* Values for multi-retrig */
 static struct retrig_t rval[] = {

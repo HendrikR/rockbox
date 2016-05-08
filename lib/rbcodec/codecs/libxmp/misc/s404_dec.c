@@ -21,7 +21,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 /* #include "compat.h" 
 

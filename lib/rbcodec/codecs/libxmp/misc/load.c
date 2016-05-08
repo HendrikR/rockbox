@@ -27,12 +27,12 @@
 #include "ptpopen.h"
 #endif
 
-#include "driver.h"
-#include "convert.h"
-#include "loader.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/convert.h"
+#include "../lib/rbcodec/codecs/libxmp/include/loader.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 
-#include "xmp_list.h"
+#include "../lib/rbcodec/codecs/libxmp/include/list.h"
 
 int pw_enable(char *, int);
 

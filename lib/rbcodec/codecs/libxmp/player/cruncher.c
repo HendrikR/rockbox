@@ -27,9 +27,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "driver.h"
-#include "convert.h"
-#include "mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/convert.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
 
 #define INTERPOLATE() \
     if (itpt >> SMIX_SHIFT) { \

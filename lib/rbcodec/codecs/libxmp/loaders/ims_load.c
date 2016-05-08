@@ -33,7 +33,7 @@
 #include <sys/types.h>
 
 #include "load.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 struct ims_instrument {
     uint8 name[20];

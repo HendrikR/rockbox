@@ -11,7 +11,7 @@
 #endif
 
 #include "load.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 #define MAGIC_MGT	MAGIC4(0x00,'M','G','T')
 #define MAGIC_MCS	MAGIC4(0xbd,'M','C','S')

@@ -35,7 +35,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 #include "ym2149.h"
 
 //-------------------------------------------------------------------

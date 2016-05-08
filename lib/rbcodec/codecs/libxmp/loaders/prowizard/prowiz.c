@@ -14,7 +14,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
 
 #include "prowiz.h"
 

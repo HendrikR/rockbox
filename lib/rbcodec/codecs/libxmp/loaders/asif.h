@@ -3,7 +3,7 @@
 #define __XMP_ASIF_H
 
 #include <stdio.h>
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 int asif_load(struct xmp_context *, FILE *, int);
 

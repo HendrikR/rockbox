@@ -1387,7 +1387,7 @@ int main(int argc, char **argv)
 #include "config.h"
 #endif
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 int decrunch_lzx(FILE *f, FILE *fo)                          
 {                                                          

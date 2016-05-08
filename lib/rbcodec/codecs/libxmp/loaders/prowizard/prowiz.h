@@ -7,8 +7,8 @@
 #endif
 
 #include <stdio.h>
-#include "xmp_list.h"
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/list.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 #define MIN_FILE_LENGHT 2048
 

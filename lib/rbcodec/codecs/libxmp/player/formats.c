@@ -11,9 +11,9 @@
 #endif
 
 #include <stdlib.h>
-#include "common.h"
-#include "xmp_list.h"
-#include "loader.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/list.h"
+#include "../lib/rbcodec/codecs/libxmp/include/loader.h"
 
 int pw_init(void);
 

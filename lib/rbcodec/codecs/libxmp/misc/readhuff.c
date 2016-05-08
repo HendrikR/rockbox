@@ -12,9 +12,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "readrle.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readrle.h"
 
-#include "readhuff.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readhuff.h"
 
 
 struct huff_node_tag

@@ -11,7 +11,7 @@
 #endif
 
 #include <string.h>
-#include "driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
 
 extern struct xmp_fmt_info *__fmt_head;
 

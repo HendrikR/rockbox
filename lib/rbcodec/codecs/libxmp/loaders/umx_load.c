@@ -11,7 +11,7 @@
 #endif
 
 #include "load.h"
-#include "xmp_list.h"
+#include "../lib/rbcodec/codecs/libxmp/include/list.h"
 
 #define TEST_SIZE 1500
 

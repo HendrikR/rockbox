@@ -27,7 +27,7 @@
 #include "load.h"
 #include "stx.h"
 #include "s3m.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 
 static int stx_test (FILE *, char *, const int);

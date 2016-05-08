@@ -20,7 +20,7 @@
 #endif
 
 #include "load.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 
 static int amf_test(FILE *, char *, const int);

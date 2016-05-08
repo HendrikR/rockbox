@@ -13,9 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
-#include "convert.h"
-#include "driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/convert.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
 
 
 /*

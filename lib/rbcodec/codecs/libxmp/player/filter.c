@@ -17,11 +17,11 @@
 #include "config.h"
 #endif
 
-#include "xmp.h"
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 #include "player.h"
-#include "driver.h"
-#include "mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
 
 static int filter_cutoff[] = {
      130,  132,  134,  136,  138,  140,  142,  144,

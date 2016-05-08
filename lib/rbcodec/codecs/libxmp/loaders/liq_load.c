@@ -15,7 +15,7 @@
 #endif
 
 #include <assert.h>
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 #include "load.h"
 #include "liq.h"
 

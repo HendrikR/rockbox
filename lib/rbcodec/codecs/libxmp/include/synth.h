@@ -1,7 +1,7 @@
 #ifndef __XMP_SYNTH_H
 #define __XMP_SYNTH_H
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 struct xmp_synth_info {
 	int (*init)(struct xmp_context *, int);

@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 int kunzip_inflate_init(void);
 int kunzip_inflate_free(void);

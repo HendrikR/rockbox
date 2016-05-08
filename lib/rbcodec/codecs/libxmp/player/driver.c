@@ -12,13 +12,13 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "driver.h"
-#include "convert.h"
-#include "mixer.h"
-#include "period.h"
-#include "readlzw.h"
-#include "synth.h"
-#include "spectrum.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/convert.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readlzw.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/spectrum.h"
 #include "smix.h"
 
 #define	FREE	-1

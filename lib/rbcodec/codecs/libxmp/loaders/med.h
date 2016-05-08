@@ -6,7 +6,7 @@
  * for more information.
  */
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 
 #define MMD_INST_TYPES 9

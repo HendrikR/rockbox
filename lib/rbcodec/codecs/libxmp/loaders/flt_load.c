@@ -12,7 +12,7 @@
 
 #include "load.h"
 #include "mod.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 static int flt_test (FILE *, char *, const int);
 static int flt_load (struct xmp_context *, FILE *, const int);

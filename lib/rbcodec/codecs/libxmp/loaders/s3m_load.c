@@ -63,8 +63,8 @@
 
 #include "load.h"
 #include "s3m.h"
-#include "period.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 
 #define MAGIC_SCRM	MAGIC4('S','C','R','M')
 #define MAGIC_SCRI	MAGIC4('S','C','R','I')

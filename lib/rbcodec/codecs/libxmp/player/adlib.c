@@ -10,10 +10,10 @@
 #include "config.h"
 #endif
 
-#include "xmp.h"
-#include "common.h"
-#include "driver.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 #include "fmopl.h"
 
 /* Use the old GPL-compatible version */

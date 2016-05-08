@@ -20,10 +20,10 @@
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "common.h"
-#include "readrle.h"
-#include "readhuff.h"
-#include "readlzw.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readrle.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readhuff.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readlzw.h"
 
 
 struct archived_file_header_tag {

@@ -57,7 +57,7 @@
 
 #include "load.h"
 #include "iff.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 #define MAGIC_PSM_	MAGIC4('P','S','M',' ')
 #define MAGIC_OPLH	MAGIC4('O','P','L','H')

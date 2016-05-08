@@ -18,8 +18,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "driver.h"
-#include "mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
 
 static int drv_parm = 0;
 

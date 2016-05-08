@@ -12,7 +12,7 @@
 
 #include "load.h"
 #include "stm.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 
 static int stm_test (FILE *, char *, const int);

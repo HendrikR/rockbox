@@ -21,7 +21,7 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 #include "load.h"
 
 #define MAGIC_MED2	MAGIC4('M','E','D',2)

@@ -13,7 +13,7 @@
 #include <time.h>
 #include "load.h"
 #include "it.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 #define MAGIC_IMPM	MAGIC4('I','M','P','M')
 #define MAGIC_IMPS	MAGIC4('I','M','P','S')

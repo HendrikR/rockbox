@@ -11,7 +11,7 @@
 #endif
 
 #include "load.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 #include "rtm.h"
 
 

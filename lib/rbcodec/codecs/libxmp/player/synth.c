@@ -10,9 +10,9 @@
 #include "config.h"
 #endif
 
-#include "xmp.h"
-#include "common.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 
 static void synth_setpatch(struct xmp_context *ctx, int c, uint8 *data)
 {

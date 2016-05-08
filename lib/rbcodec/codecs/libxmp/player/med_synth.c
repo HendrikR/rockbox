@@ -10,9 +10,9 @@
 #include "config.h"
 #endif
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 #include "player.h"
-#include "driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
 
 /* Commands in the volume and waveform sequence table:
  *

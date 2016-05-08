@@ -20,7 +20,7 @@
 #include "config.h"
 #endif
 
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 #include "load.h"
 
 #define MAGIC_SONG	MAGIC4('S','O','N','G')

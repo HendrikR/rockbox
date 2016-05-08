@@ -17,7 +17,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 /* #include "stdafx.h" */
 /* #include "sndfile.h" */

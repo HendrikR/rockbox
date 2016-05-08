@@ -20,7 +20,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 #define MAGIC_OGGS	0x4f676753
 

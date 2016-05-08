@@ -16,7 +16,7 @@
 
 #include "load.h"
 #include "iff.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 #define MAGIC_DDMF	MAGIC4('D','D','M','F')
 

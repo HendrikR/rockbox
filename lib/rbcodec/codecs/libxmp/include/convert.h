@@ -2,7 +2,7 @@
 #ifndef __XMP_CONVERT_H
 #define __XMP_CONVERT_H
 
-#include "driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
 
 void xmp_cvt_hsc2sbi (char *);
 void xmp_cvt_diff2abs (int, int, char *);

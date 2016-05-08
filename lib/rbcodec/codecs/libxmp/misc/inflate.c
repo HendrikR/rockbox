@@ -6,7 +6,7 @@
 //#include "kinflate.h"
 //#include "zipfile.h"
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 #define read_int_b(x) read32b(x)
 #define read_word(x) read16l(x)

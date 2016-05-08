@@ -14,7 +14,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 #ifdef __AMIGA__
 #include <sys/unistd.h>

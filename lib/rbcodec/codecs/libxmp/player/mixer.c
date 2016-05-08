@@ -14,13 +14,13 @@
 #include <string.h>
 #include <assert.h>
 
-#include "common.h"
-#include "driver.h"
-#include "mixer.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 #include "smix.h"
-#include "period.h"
-#include "convert.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/convert.h"
 
 
 #define FLAG_ITPT	0x01

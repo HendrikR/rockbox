@@ -10,10 +10,10 @@
 #include "config.h"
 #endif
 
-#include "common.h"
-#include "driver.h"
-#include "mixer.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 
 
 /* Mixers

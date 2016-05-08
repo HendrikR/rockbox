@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 #define WANT_PP2X_DECRYPTING
 

@@ -23,7 +23,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <math.h>
-#include "driver.h"		/* use M.A.M.E. */
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"		/* use M.A.M.E. */
 
 /*** For xmp ***/
 #define HAS_YM3812 1

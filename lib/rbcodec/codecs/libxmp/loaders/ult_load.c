@@ -19,7 +19,7 @@
 #include "config.h"
 #endif
 
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 #include "load.h"
 
 

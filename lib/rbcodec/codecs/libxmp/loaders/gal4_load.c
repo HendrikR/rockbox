@@ -14,7 +14,7 @@
 #include <limits.h>
 #include "load.h"
 #include "iff.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 /* Galaxy Music System 4.0 module file loader
  *

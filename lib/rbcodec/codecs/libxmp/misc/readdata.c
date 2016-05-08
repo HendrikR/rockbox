@@ -10,7 +10,7 @@
 #include "config.h"
 #endif
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 
 inline uint8 read8(FILE *f)

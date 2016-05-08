@@ -11,12 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "common.h"
-#include "xxm.h"
-#include "effects.h"
-#include "driver.h"
-#include "convert.h"
-#include "loader.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xxm.h"
+#include "../lib/rbcodec/codecs/libxmp/include/effects.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/convert.h"
+#include "../lib/rbcodec/codecs/libxmp/include/loader.h"
 
 char *copy_adjust(uint8 *, uint8 *, int);
 int test_name(uint8 *, int);

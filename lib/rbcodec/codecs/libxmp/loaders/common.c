@@ -15,9 +15,9 @@
 #include <dirent.h>
 #include <stdarg.h>
 
-#include "xmp.h"
-#include "common.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 #include "load.h"
 
 

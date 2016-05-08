@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "readrle.h"
+#include "../lib/rbcodec/codecs/libxmp/include/readrle.h"
 
 
 static unsigned char *data_in_point,*data_in_max;

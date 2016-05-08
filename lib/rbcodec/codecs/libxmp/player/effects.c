@@ -10,12 +10,12 @@
 #include "config.h"
 #endif
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 #include "player.h"
-#include "effects.h"
-#include "period.h"
-#include "driver.h"
-#include "mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/effects.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
 
 #define NOT_IMPLEMENTED
 

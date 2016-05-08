@@ -81,8 +81,8 @@ typedef signed long long int64;
 #define strcat strlcat
 #endif
 
-#include "xmp.h"
-#include "xxm.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xxm.h"
 
 /* Constants */
 #define PAL_RATE	250.0		/* 1 / (50Hz * 80us)		  */
@@ -169,8 +169,8 @@ struct xmp_ord_info {
 
 /* Context */
 
-#include "xmp_list.h"
-#include "xxm.h"
+#include "../lib/rbcodec/codecs/libxmp/include/list.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xxm.h"
 
 struct xmp_mod_context {
 	int verbosity;			/* verbosity level */

@@ -11,7 +11,7 @@
 #endif
 
 #include "load.h"
-#include "synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
 
 
 static int amd_test (FILE *, char *, const int);

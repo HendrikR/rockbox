@@ -30,9 +30,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "common.h"
-#include "effects.h"
-#include "mixer.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/effects.h"
+#include "../lib/rbcodec/codecs/libxmp/include/mixer.h"
 
 #define S3M_END		0xff
 #define S3M_SKIP	0xff

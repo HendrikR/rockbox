@@ -13,12 +13,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "xmp.h"
-#include "common.h"
-#include "effects.h"
-#include "driver.h"
-#include "synth.h"
-#include "spectrum.h"
+#include "../lib/rbcodec/codecs/libxmp/include/xmp.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/effects.h"
+#include "../lib/rbcodec/codecs/libxmp/include/driver.h"
+#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
+#include "../lib/rbcodec/codecs/libxmp/include/spectrum.h"
 #include "ym2149.h"
 
 

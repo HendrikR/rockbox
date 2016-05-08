@@ -12,7 +12,7 @@
 
 #include "load.h"
 #include "ptm.h"
-#include "period.h"
+#include "../lib/rbcodec/codecs/libxmp/include/period.h"
 
 #define MAGIC_PTMF	MAGIC4('P','T','M','F')
 

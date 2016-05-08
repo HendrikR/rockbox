@@ -2,7 +2,7 @@
 #ifndef __XMP_DRIVER_H
 #define __XMP_DRIVER_H
 
-#include "common.h"
+#include "../lib/rbcodec/codecs/libxmp/include/common.h"
 
 #define XMP_PATCH_SYNTH	-1
 
