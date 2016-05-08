@@ -1,14 +1,11 @@
-
-#ifndef __PROWIZ_H
-#define __PROWIZ_H
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef PROWIZ_H
+#define PROWIZ_H
 
 #include <stdio.h>
-#include "../lib/rbcodec/codecs/libxmp/include/list.h"
-#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "libxmp/list.h"
+#include "libxmp/common.h"
+#include "libxmp/format.h"
+#include "libxmp/hio.h"
 
 #define MIN_FILE_LENGHT 2048
 
@@ -16,15 +13,6 @@
 
 #define MAGIC4(a,b,c,d) \
     (((uint32)(a)<<24)|((uint32)(b)<<16)|((uint32)(c)<<8)|(d))
-
-#ifndef __XMP_H
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned int uint32;
-#endif
-
-#define PW_DELTA	0x0002
-#define PW_PACKED	0x0004
 
 #define PW_MOD_MAGIC	MAGIC4('M','.','K','.')
 
@@ -38,67 +26,69 @@ typedef unsigned int uint32;
  */
 
 struct pw_format {
-	char *id;
 	char *name;
-	int flags;
-	int (*test)(uint8 *, int);
-	int (*depack)(FILE *, FILE *);
-	int enable;
+	int (*test)(uint8 *, char *, int);
+	int (*depack)(HIO_HANDLE *, FILE *);
 	struct list_head list;
 };
 
-int pw_wizardry(int, int, struct pw_format **);
-int pw_move_data(FILE *, FILE *, int);
+int pw_wizardry(HIO_HANDLE *, FILE *, char **);
+int pw_move_data(FILE *, HIO_HANDLE *, int);
 int pw_write_zero(FILE *, int);
-int pw_enable(char *, int);
-int pw_check(unsigned char *, int);
+/* int pw_enable(char *, int); */
+int pw_check(unsigned char *, int, struct xmp_test_info *);
+void pw_read_title(unsigned char *, char *, int);
 
 extern const uint8 ptk_table[37][2];
 extern const short tun_table[16][36];
 
-extern struct pw_format pw_ac1d;
-extern struct pw_format pw_crb;
-extern struct pw_format pw_di;
-extern struct pw_format pw_eu;
-extern struct pw_format pw_emod;
-extern struct pw_format pw_fcm;
-extern struct pw_format pw_fchs;
-extern struct pw_format pw_fuzz;
-extern struct pw_format pw_gmc;
-extern struct pw_format pw_hrt;
-extern struct pw_format pw_kris;
-extern struct pw_format pw_ksm;
-extern struct pw_format pw_mp_id;
-extern struct pw_format pw_mp_noid;
-extern struct pw_format pw_np1;
-extern struct pw_format pw_np2;
-extern struct pw_format pw_np3;
-extern struct pw_format pw_nru;
-extern struct pw_format pw_ntp;
-extern struct pw_format pw_p01;
-extern struct pw_format pw_p10c;
-extern struct pw_format pw_p18a;
-extern struct pw_format pw_p20;
-extern struct pw_format pw_p4x;
-extern struct pw_format pw_p50a;
-extern struct pw_format pw_p60a;
-extern struct pw_format pw_p61a;
-extern struct pw_format pw_pha;
-extern struct pw_format pw_pp21;
-extern struct pw_format pw_pru1;
-extern struct pw_format pw_pru2;
-extern struct pw_format pw_skyt;
-extern struct pw_format pw_starpack;
-extern struct pw_format pw_stim;
-extern struct pw_format pw_tdd;
-extern struct pw_format pw_titanics;
-extern struct pw_format pw_tp3;
-extern struct pw_format pw_unic_emptyid;
-extern struct pw_format pw_unic_id;
-extern struct pw_format pw_unic_noid;
-extern struct pw_format pw_unic2;
-extern struct pw_format pw_wn;
-extern struct pw_format pw_xann;
-extern struct pw_format pw_zen;
+extern const struct pw_format pw_ac1d;
+extern const struct pw_format pw_crb;
+extern const struct pw_format pw_di;
+extern const struct pw_format pw_eu;
+extern const struct pw_format pw_emod;
+extern const struct pw_format pw_fcm;
+extern const struct pw_format pw_fchs;
+extern const struct pw_format pw_fuzz;
+extern const struct pw_format pw_gmc;
+extern const struct pw_format pw_hrt;
+extern const struct pw_format pw_kris;
+extern const struct pw_format pw_ksm;
+extern const struct pw_format pw_mp_id;
+extern const struct pw_format pw_mp_noid;
+extern const struct pw_format pw_np1;
+extern const struct pw_format pw_np2;
+extern const struct pw_format pw_np3;
+extern const struct pw_format pw_nru;
+extern const struct pw_format pw_ntp;
+extern const struct pw_format pw_pm01;
+extern const struct pw_format pw_p10c;
+extern const struct pw_format pw_p18a;
+extern const struct pw_format pw_p20;
+extern const struct pw_format pw_p4x;
+extern const struct pw_format pw_p50a;
+extern const struct pw_format pw_p60a;
+extern const struct pw_format pw_p61a;
+extern const struct pw_format pw_pha;
+extern const struct pw_format pw_pp10;
+extern const struct pw_format pw_pp21;
+extern const struct pw_format pw_pp30;
+extern const struct pw_format pw_pru1;
+extern const struct pw_format pw_pru2;
+extern const struct pw_format pw_skyt;
+extern const struct pw_format pw_starpack;
+extern const struct pw_format pw_stim;
+extern const struct pw_format pw_tdd;
+extern const struct pw_format pw_titanics;
+extern const struct pw_format pw_tp1;
+extern const struct pw_format pw_tp2;
+extern const struct pw_format pw_tp3;
+extern const struct pw_format pw_unic_emptyid;
+extern const struct pw_format pw_unic_id;
+extern const struct pw_format pw_unic_noid;
+extern const struct pw_format pw_unic2;
+extern const struct pw_format pw_wn;
+extern const struct pw_format pw_xann;
+extern const struct pw_format pw_zen;
 
 #endif

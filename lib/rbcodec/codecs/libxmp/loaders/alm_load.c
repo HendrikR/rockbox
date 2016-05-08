@@ -1,9 +1,23 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /* ALM (Aley's Module) is a module format used on 8bit computers. It was
@@ -15,31 +29,29 @@
  * from different files. Using *module into a global variable is a hack.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 
-static int alm_test (FILE *, char *, const int);
-static int alm_load (struct xmp_context *, FILE *, const int);
+static int alm_test (HIO_HANDLE *, char *, const int);
+static int alm_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info alm_loader = {
-    "ALM",
-    "Aley Keptr",
+const struct format_loader alm_loader = {
+    "Aley Keptr (ALM)",
     alm_test,
     alm_load
 };
 
-static int alm_test(FILE *f, char *t, const int start)
+static int alm_test(HIO_HANDLE *f, char *t, const int start)
 {
     char buf[7];
 
-    if (fread(buf, 1, 7, f) < 7)
+    if (HIO_HANDLE_TYPE(f) != HIO_HANDLE_TYPE_FILE)
+	return -1;
+
+    if (hio_read(buf, 1, 7, f) < 7)
 	return -1;
 
     if (memcmp(buf, "ALEYMOD", 7) && memcmp(buf, "ALEY MO", 7))
@@ -62,122 +74,121 @@ struct alm_file_header {
 
 #define NAME_SIZE 255
 
-static int alm_load(struct xmp_context *ctx, FILE *f, const int start)
+static int alm_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
+    struct xmp_module *mod = &m->mod;
     int i, j;
     struct alm_file_header afh;
-    struct xxm_event *event;
+    struct xmp_event *event;
     struct stat stat;
     uint8 b;
     char *basename;
     char filename[NAME_SIZE];
     char modulename[NAME_SIZE];
-    FILE *s;
 
     LOAD_INIT();
 
-    fread(&afh.id, 7, 1, f);
+    hio_read(&afh.id, 7, 1, f);
 
     if (!strncmp((char *)afh.id, "ALEYMOD", 7))		/* Version 1.0 */
-	m->xxh->tpo = afh.speed / 2;
+	mod->spd = afh.speed / 2;
 
     strncpy(modulename, m->filename, NAME_SIZE);
     basename = strtok (modulename, ".");
 
-    afh.speed = read8(f);
-    afh.length = read8(f);
-    afh.restart = read8(f);
-    fread(&afh.order, 128, 1, f);
+    afh.speed = hio_read8(f);
+    afh.length = hio_read8(f);
+    afh.restart = hio_read8(f);
+    hio_read(&afh.order, 128, 1, f);
 
-    m->xxh->len = afh.length;
-    m->xxh->rst = afh.restart;
-    memcpy (m->xxo, afh.order, m->xxh->len);
+    mod->len = afh.length;
+    mod->rst = afh.restart;
+    memcpy (mod->xxo, afh.order, mod->len);
 
-    for (m->xxh->pat = i = 0; i < m->xxh->len; i++)
-	if (m->xxh->pat < afh.order[i])
-	    m->xxh->pat = afh.order[i];
-    m->xxh->pat++;
+    for (mod->pat = i = 0; i < mod->len; i++)
+	if (mod->pat < afh.order[i])
+	    mod->pat = afh.order[i];
+    mod->pat++;
 
-    m->xxh->ins = 31;
-    m->xxh->trk = m->xxh->pat * m->xxh->chn;
-    m->xxh->smp = m->xxh->ins;
+    mod->ins = 31;
+    mod->trk = mod->pat * mod->chn;
+    mod->smp = mod->ins;
     m->c4rate = C4_NTSC_RATE;
 
     set_type(m, "Aley's Module");
 
     MODULE_INFO();
 
-    PATTERN_INIT();
+    if (pattern_init(mod) < 0)
+	return -1;
 
     /* Read and convert patterns */
-    reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+    D_(D_INFO "Stored patterns: %d", mod->pat);
 
-    for (i = 0; i < m->xxh->pat; i++) {
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	TRACK_ALLOC (i);
-	for (j = 0; j < 64 * m->xxh->chn; j++) {
-	    event = &EVENT (i, j % m->xxh->chn, j / m->xxh->chn);
-	    b = read8(f);
+    for (i = 0; i < mod->pat; i++) {
+	if (pattern_tracks_alloc(mod, i, 64) < 0)
+		return -1;
+
+	for (j = 0; j < 64 * mod->chn; j++) {
+	    event = &EVENT (i, j % mod->chn, j / mod->chn);
+	    b = hio_read8(f);
 	    if (b)
-		event->note = (b == 37) ? 0x61 : b + 36;
-	    event->ins = read8(f);
+		event->note = (b == 37) ? 0x61 : b + 48;
+	    event->ins = hio_read8(f);
 	}
-	reportv(ctx, 0, ".");
     }
-    reportv(ctx, 0, "\n");
 
-    INSTRUMENT_INIT();
+    if (instrument_init(mod) < 0)
+	return -1;
 
     /* Read and convert instruments and samples */
 
-    reportv(ctx, 0, "Loading samples: %d ", m->xxh->ins);
+    D_(D_INFO "Loading samples: %d", mod->ins);
 
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
+    for (i = 0; i < mod->ins; i++) {
+	HIO_HANDLE *s;
+
+	if (subinstrument_alloc(mod, i, 1) < 0)
+	    return -1;
+
+	mod->xxi[i].sub = calloc(sizeof (struct xmp_subinstrument), 1);
 	snprintf(filename, NAME_SIZE, "%s.%d", basename, i + 1);
-	s = fopen (filename, "rb");
+	s = hio_open_file(filename);
 
-	if (!(m->xxih[i].nsm = (s != NULL)))
+	if (s == NULL)
 	    continue;
 
-	fstat (fileno (s), &stat);
-	b = read8(s);		/* Get first octet */
-	m->xxs[i].len = stat.st_size - 5 * !b;
+	mod->xxi[i].nsm = 1;
+
+	hio_stat(s, &stat);
+	b = hio_read8(s);		/* Get first octet */
+	mod->xxs[i].len = stat.st_size - 5 * !b;
 
 	if (!b) {		/* Instrument with header */
-	    m->xxs[i].lps = read16l(f);
-	    m->xxs[i].lpe = read16l(f);
-	    m->xxs[i].flg = m->xxs[i].lpe > m->xxs[i].lps ? WAVE_LOOPING : 0;
+	    mod->xxs[i].lps = hio_read16l(f);
+	    mod->xxs[i].lpe = hio_read16l(f);
+	    mod->xxs[i].flg = mod->xxs[i].lpe > mod->xxs[i].lps ? XMP_SAMPLE_LOOP : 0;
 	} else {
-	    fseek(s, 0, SEEK_SET);
+	    hio_seek(s, 0, SEEK_SET);
 	}
 
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].vol = 0x40;
-	m->xxi[i][0].sid = i;
+	mod->xxi[i].sub[0].pan = 0x80;
+	mod->xxi[i].sub[0].vol = 0x40;
+	mod->xxi[i].sub[0].sid = i;
 
-	if ((V(1)) && (strlen((char *) m->xxih[i].name) ||
-		(m->xxs[i].len > 1))) {
-	    report ("\n[%2X] %-14.14s %04x %04x %04x %c V%02x ", i,
-		filename, m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe, m->xxs[i].flg
-		& WAVE_LOOPING ? 'L' : ' ', m->xxi[i][0].vol);
-	}
+	D_(D_INFO "[%2X] %-14.14s %04x %04x %04x %c V%02x", i,
+		filename, mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,
+		mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ', mod->xxi[i].sub[0].vol);
 
-	xmp_drv_loadpatch(ctx, s, m->xxi[i][0].sid, m->c4rate,
-	    XMP_SMP_UNS, &m->xxs[m->xxi[i][0].sid], NULL);
+	if (load_sample(m, s, SAMPLE_FLAG_UNS, &mod->xxs[i], NULL) < 0)
+	    return -1;
 
-	fclose(s);
-
-	reportv(ctx, 0, ".");
+	hio_close(s);
     }
-    reportv(ctx, 0, "\n");
 
     /* ALM is LRLR, not LRRL */
-    for (i = 0; i < m->xxh->chn; i++)
-	m->xxc[i].pan = (i % 2) * 0xff;
+    for (i = 0; i < mod->chn; i++)
+	mod->xxc[i].pan = DEFPAN((i % 2) * 0xff);
 
     return 0;
 }

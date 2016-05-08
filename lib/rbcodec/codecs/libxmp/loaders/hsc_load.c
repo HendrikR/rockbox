@@ -1,17 +1,27 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
-#include "../lib/rbcodec/codecs/libxmp/include/synth.h"
+#include "libxmp/loaders/loader.h"
+#include "libxmp/synth.h"
 
 /* Based on the HSC File Format Spec, by Simon Peter <dn.tlp@gmx.net>
  * 
@@ -22,24 +32,23 @@
  */
 
 
-static int hsc_test (FILE *, char *, const int);
-static int hsc_load (struct xmp_context *, FILE *, const int);
+static int hsc_test (HIO_HANDLE *, char *, const int);
+static int hsc_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info hsc_loader = {
-    "HSC",
+const struct format_loader hsc_loader = {
     "HSC-Tracker",
     hsc_test,
     hsc_load
 };
 
-static int hsc_test(FILE *f, char *t, const int start)
+static int hsc_test(HIO_HANDLE *f, char *t, const int start)
 {
     int p, i, r, c;
     uint8 buf[1200];
 
-    fseek(f, 128 * 12, SEEK_CUR);
+    hio_seek(f, 128 * 12, SEEK_CUR);
 
-    if (fread(buf, 1, 51, f) != 51)
+    if (hio_read(buf, 1, 51, f) != 51)
 	return -1;
 
     for (p = i = 0; i < 51; i++) {
@@ -52,7 +61,7 @@ static int hsc_test(FILE *f, char *t, const int start)
 	return -1;		
 
     for (i = 0; i < p; i++) {
-	fread(buf, 1, 64 * 9 * 2, f);
+	hio_read(buf, 1, 64 * 9 * 2, f);
 	for (r = 0; r < 64; r++) {
 	    for (c = 0; c < 9; c++) {
 		uint8 n = buf[r * 9 * 2 + c * 2];
@@ -70,17 +79,16 @@ static int hsc_test(FILE *f, char *t, const int start)
     return 0;
 }
 
-static int hsc_load(struct xmp_context *ctx, FILE *f, const int start)
+static int hsc_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
+    struct xmp_module *mod = &m->mod;
     int pat, i, r, c;
-    struct xxm_event *event;
+    struct xmp_event *event;
     uint8 *x, *sid, e[2], buf[128 * 12];
 
     LOAD_INIT();
 
-    fread(buf, 1, 128 * 12, f);
+    hio_read(buf, 1, 128 * 12, f);
 
     x = buf;
     for (i = 0; i < 128; i++, x += 12) {
@@ -90,114 +98,81 @@ static int hsc_load(struct xmp_context *ctx, FILE *f, const int start)
 	    break;
     }
 
-    m->xxh->ins = i;
+    mod->ins = i;
 
-    fseek(f, start + 0, SEEK_SET);
+    hio_seek(f, start + 0, SEEK_SET);
 
-    m->xxh->chn = 9;
-    m->xxh->bpm = 135;
-    m->xxh->tpo = 6;
-    m->xxh->smp = 0;
-    m->xxh->flg = XXM_FLG_LINEAR;
+    mod->chn = 9;
+    mod->bpm = 135;
+    mod->spd = 6;
+    mod->smp = mod->ins;
 
-    set_type(m, "HSC (HSC-Tracker)");
+    m->quirk |= QUIRK_LINEAR;
+
+    set_type(m, "HSC-Tracker");
 
     MODULE_INFO();
 
-    reportv(ctx, 1,
-"               Modulator                       Carrier               Common\n"
-"     Char Fr LS OL At De Su Re WS   Char Fr LS OL At De Su Re WS   Fbk Alg Fin\n");
-
     /* Read instruments */
-    INSTRUMENT_INIT();
+    if (instrument_init(mod) < 0)
+	return -1;
 
-    fread (buf, 1, 128 * 12, f);
+    hio_read(buf, 1, 128 * 12, f);
     sid = buf;
-    for (i = 0; i < m->xxh->ins; i++, sid += 12) {
-	xmp_cvt_hsc2sbi((char *)sid);
+    for (i = 0; i < mod->ins; i++, sid += 12) {
+	if (subinstrument_alloc(mod, i, 1) < 0)
+	    return -1;
 
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
-	m->xxih[i].nsm = 1;
-	m->xxi[i][0].vol = 0x40;
-	m->xxi[i][0].fin = (int8)sid[11] / 4;
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].xpo = 0;
-	m->xxi[i][0].sid = i;
-	m->xxih[i].rls = LSN(sid[7]) * 32;	/* carrier release */
+	mod->xxi[i].nsm = 1;
+	mod->xxi[i].sub[0].vol = 0x40;
+	mod->xxi[i].sub[0].fin = (int8)sid[11] / 4;
+	mod->xxi[i].sub[0].pan = 0x80;
+	mod->xxi[i].sub[0].xpo = 0;
+	mod->xxi[i].sub[0].sid = i;
+	mod->xxi[i].rls = LSN(sid[7]) * 32;	/* carrier release */
 
-	if (V(1)) {
-	    int j, x;
-
-	    for (j = x = 0; j < 12; j++)
-		x |= sid[j];
-
-	    if (!x)
-		goto skip;
-
-	    report ("[%2X] ", i);
-
-	    report ("%c%c%c%c %2d ",
-		sid[0] & 0x80 ? 'a' : '-', sid[0] & 0x40 ? 'v' : '-',
-		sid[0] & 0x20 ? 's' : '-', sid[0] & 0x10 ? 'e' : '-',
-		sid[0] & 0x0f);
-	    report ("%2d %2d ", sid[2] >> 6, sid[2] & 0x3f);
-	    report ("%2d %2d ", sid[4] >> 4, sid[4] & 0x0f);
-	    report ("%2d %2d ", sid[6] >> 4, sid[6] & 0x0f);
-	    report ("%2d   ", sid[8]);
-
-	    report ("%c%c%c%c %2d ",
-		sid[1] & 0x80 ? 'a' : '-', sid[1] & 0x40 ? 'v' : '-',
-		sid[1] & 0x20 ? 's' : '-', sid[1] & 0x10 ? 'e' : '-',
-		sid[1] & 0x0f);
-	    report ("%2d %2d ", sid[3] >> 6, sid[3] & 0x3f);
-	    report ("%2d %2d ", sid[5] >> 4, sid[5] & 0x0f);
-	    report ("%2d %2d ", sid[7] >> 4, sid[7] & 0x0f);
-	    report ("%2d   ", sid[9]);
-
-	    report ("%2d  %2d %4d\n", sid[10] >> 1, sid[10] & 0x01,
-							(int8)sid[11]);
-	}
-skip:
-	xmp_drv_loadpatch(ctx, f, i, 0, XMP_SMP_ADLIB, NULL, (char *)sid);
+	if (load_sample(m, f, SAMPLE_FLAG_ADLIB | SAMPLE_FLAG_HSC,
+					&mod->xxs[i], (char *)sid) < 0)
+		return -1;
     }
 
     /* Read orders */
     for (pat = i = 0; i < 51; i++) {
-	fread (&m->xxo[i], 1, 1, f);
-	if (m->xxo[i] & 0x80)
+	mod->xxo[i] = hio_read8(f);
+	if (mod->xxo[i] > 127)
 	    break;			/* FIXME: jump line */
-	if (m->xxo[i] > pat)
-	    pat = m->xxo[i];
+	if (mod->xxo[i] > pat)
+	    pat = mod->xxo[i];
     }
-    fseek(f, 50 - i, SEEK_CUR);
-    m->xxh->len = i;
-    m->xxh->pat = pat + 1;
-    m->xxh->trk = m->xxh->pat * m->xxh->chn;
+    hio_seek(f, 50 - i, SEEK_CUR);
+    mod->len = i;
+    mod->pat = pat + 1;
+    mod->trk = mod->pat * mod->chn;
 
-    if (V(0)) {
-	report ("Module length  : %d patterns\n", m->xxh->len);
-	report ("Instruments    : %d\n", m->xxh->ins);
-	report ("Stored patterns: %d ", m->xxh->pat);
-    }
-    PATTERN_INIT();
+    D_(D_INFO "Module length: %d", mod->len);
+    D_(D_INFO "Instruments: %d", mod->ins);
+    D_(D_INFO "Stored patterns: %d", mod->pat);
+
+    if (pattern_init(mod) < 0)
+	return -1;
 
     /* Read and convert patterns */
-    for (i = 0; i < m->xxh->pat; i++) {
+    for (i = 0; i < mod->pat; i++) {
 	int ins[9] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	TRACK_ALLOC (i);
-        for (r = 0; r < m->xxp[i]->rows; r++) {
+	if (pattern_tracks_alloc(mod, i, 64) < 0)
+	    return -1;
+
+        for (r = 0; r < mod->xxp[i]->rows; r++) {
             for (c = 0; c < 9; c++) {
-	        fread (e, 1, 2, f);
+	        hio_read(e, 1, 2, f);
 	        event = &EVENT (i, c, r);
 		if (e[0] & 0x80) {
 		    ins[c] = e[1] + 1;
 		} else if (e[0] == 0x7f) {
 		    event->note = XMP_KEY_OFF;
 		} else if (e[0] > 0) {
-		    event->note = e[0] + 13;
+		    event->note = e[0] + 25;
 		    event->ins = ins[c];
 		}
 
@@ -210,17 +185,14 @@ skip:
 		}
 	    }
 	}
-	reportv(ctx, 0, ".");
     }
-    reportv(ctx, 0, "\n");
 
-    for (i = 0; i < m->xxh->chn; i++) {
-	m->xxc[i].pan = 0x80;
-	m->xxc[i].flg = XXM_CHANNEL_SYNTH;
+    for (i = 0; i < mod->chn; i++) {
+	mod->xxc[i].pan = 0x80;
+	mod->xxc[i].flg = XMP_CHANNEL_SYNTH;
     }
 
     m->synth = &synth_adlib;
 
     return 0;
 }
-

@@ -1,22 +1,31 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "libxmp/loaders/loader.h"
 
-#include "load.h"
+static int coco_test (HIO_HANDLE *, char *, const int);
+static int coco_load (struct module_data *, HIO_HANDLE *, const int);
 
-static int coco_test (FILE *, char *, const int);
-static int coco_load (struct xmp_context *, FILE *, const int);
-
-struct xmp_loader_info coco_loader = {
-	"COCO",
+const struct format_loader coco_loader = {
 	"Coconizer",
 	coco_test,
 	coco_load
@@ -32,43 +41,43 @@ static int check_cr(uint8 *s, int n)
 	return -1;
 }
 
-static int coco_test(FILE *f, char *t, const int start)
+static int coco_test(HIO_HANDLE *f, char *t, const int start)
 {
 	uint8 x, buf[20];
 	uint32 y;
 	int n, i;
 
-	x = read8(f);
+	x = hio_read8(f);
 
 	/* check number of channels */
 	if (x != 0x84 && x != 0x88)
 		return -1;
 
-	fread(buf, 1, 20, f);		/* read title */
+	hio_read(buf, 1, 20, f);		/* read title */
 	if (check_cr(buf, 20) != 0)
 		return -1;
 
-	n = read8(f);			/* instruments */
+	n = hio_read8(f);			/* instruments */
 	if (n > 100)
 		return -1;
 
-	read8(f);			/* sequences */
-	read8(f);			/* patterns */
+	hio_read8(f);			/* sequences */
+	hio_read8(f);			/* patterns */
 
-	y = read32l(f);
+	y = hio_read32l(f);
 	if (y < 64 || y > 0x00100000)	/* offset of sequence table */
 		return -1;
 
-	y = read32l(f);			/* offset of patterns */
+	y = hio_read32l(f);			/* offset of patterns */
 	if (y < 64 || y > 0x00100000)
 		return -1;
 
 	for (i = 0; i < n; i++) {
-		int ofs = read32l(f);
-		int len = read32l(f);
-		int vol = read32l(f);
-		int lps = read32l(f);
-		int lsz = read32l(f);
+		int ofs = hio_read32l(f);
+		int len = hio_read32l(f);
+		int vol = hio_read32l(f);
+		int lps = hio_read32l(f);
+		int lsz = hio_read32l(f);
 
 		if (ofs < 64 || ofs > 0x00100000)
 			return -1;
@@ -82,14 +91,14 @@ static int coco_test(FILE *f, char *t, const int start)
 		if (lps + lsz - 1 > len)
 			return -1;
 
-		fread(buf, 1, 11, f);
+		hio_read(buf, 1, 11, f);
 		if (check_cr(buf, 11) != 0)
 			return -1;
 
-		read8(f);	/* unused */
+		hio_read8(f);	/* unused */
 	}
 
-	fseek(f, start + 1, SEEK_SET);
+	hio_seek(f, start + 1, SEEK_SET);
 	read_title(f, t, 20);
 
 #if 0
@@ -103,7 +112,7 @@ static int coco_test(FILE *f, char *t, const int start)
 }
 
 
-static void fix_effect(struct xxm_event *e)
+static void fix_effect(struct xmp_event *e)
 {
 	switch (e->fxt) {
 	case 0x00:			/* 00 xy Normal play or Arpeggio */
@@ -145,7 +154,7 @@ static void fix_effect(struct xxm_event *e)
 		e->fxt = FX_JUMP;
 		break;
 	case 0x0f:
-		e->fxt = FX_TEMPO;
+		e->fxt = FX_SPEED;
 		break;
 	case 0x10:			/* unused */
 		e->fxt = e->fxp = 0;
@@ -165,128 +174,125 @@ static void fix_effect(struct xxm_event *e)
 	}
 }
 
-static int coco_load(struct xmp_context *ctx, FILE *f, const int start)
+static int coco_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
-	struct xxm_event *event;
+	struct xmp_module *mod = &m->mod;
+	struct xmp_event *event;
 	int i, j;
 	int seq_ptr, pat_ptr, smp_ptr[100];
 
 	LOAD_INIT();
 
-	m->xxh->chn = read8(f) & 0x3f;
-	read_title(f, m->name, 20);
+	mod->chn = hio_read8(f) & 0x3f;
+	read_title(f, mod->name, 20);
 
 	for (i = 0; i < 20; i++) {
-		if (m->name[i] == 0x0d)
-			m->name[i] = 0;
+		if (mod->name[i] == 0x0d)
+			mod->name[i] = 0;
 	}
 
-	strcpy(m->type, "Coconizer");
+	set_type(m, "Coconizer");
 
-	m->xxh->ins = m->xxh->smp = read8(f);
-	m->xxh->len = read8(f);
-	m->xxh->pat = read8(f);
-	m->xxh->trk = m->xxh->pat * m->xxh->chn;
+	mod->ins = mod->smp = hio_read8(f);
+	mod->len = hio_read8(f);
+	mod->pat = hio_read8(f);
+	mod->trk = mod->pat * mod->chn;
 
-	seq_ptr = read32l(f);
-	pat_ptr = read32l(f);
+	seq_ptr = hio_read32l(f);
+	pat_ptr = hio_read32l(f);
 
 	MODULE_INFO();
-	INSTRUMENT_INIT();
 
-	m->vol_table = arch_vol_table;
+	if (instrument_init(mod) < 0)
+		return -1;
+
+	m->vol_table = (int *)arch_vol_table;
 	m->volbase = 0xff;
 
-	reportv(ctx, 1, "     Name          Len  LBeg  LEnd L Vol\n");
+	for (i = 0; i < mod->ins; i++) {
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
-
-		smp_ptr[i] = read32l(f);
-		m->xxs[i].len = read32l(f);
-		m->xxi[i][0].vol = 0xff - read32l(f);
-		m->xxi[i][0].pan = 0x80;
-		m->xxs[i].lps = read32l(f);
-                m->xxs[i].lpe = m->xxs[i].lps + read32l(f);
-		if (m->xxs[i].lpe)
-			m->xxs[i].lpe -= 1;
-		m->xxs[i].flg = m->xxs[i].lps > 0 ?  WAVE_LOOPING : 0;
-		fread(m->xxih[i].name, 1, 11, f);
+		smp_ptr[i] = hio_read32l(f);
+		mod->xxs[i].len = hio_read32l(f);
+		mod->xxi[i].sub[0].vol = 0xff - hio_read32l(f);
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxs[i].lps = hio_read32l(f);
+                mod->xxs[i].lpe = mod->xxs[i].lps + hio_read32l(f);
+		if (mod->xxs[i].lpe)
+			mod->xxs[i].lpe -= 1;
+		mod->xxs[i].flg = mod->xxs[i].lps > 0 ?  XMP_SAMPLE_LOOP : 0;
+		hio_read(mod->xxi[i].name, 1, 11, f);
 		for (j = 0; j < 11; j++) {
-			if (m->xxih[i].name[j] == 0x0d)
-				m->xxih[i].name[j] = 0;
+			if (mod->xxi[i].name[j] == 0x0d)
+				mod->xxi[i].name[j] = 0;
 		}
-		read8(f);	/* unused */
+		hio_read8(f);	/* unused */
+		mod->xxi[i].sub[0].sid = i;
 
-		m->xxih[i].nsm = !!m->xxs[i].len;
-		m->xxi[i][0].sid = i;
+		if (mod->xxs[i].len > 0)
+			mod->xxi[i].nsm = 1;
 
-		if (V(1) && (strlen((char*)m->xxih[i].name) || (m->xxs[i].len > 1))) {
-			report("[%2X] %-10.10s  %05x %05x %05x %c V%02x\n",
-				i, m->xxih[i].name,
-				m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe,
-				m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-				m->xxi[i][0].vol);
-		}
+		D_(D_INFO "[%2X] %-10.10s  %05x %05x %05x %c V%02x",
+				i, mod->xxi[i].name,
+				mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,
+				mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+				mod->xxi[i].sub[0].vol);
 	}
 
 	/* Sequence */
 
-	fseek(f, start + seq_ptr, SEEK_SET);
+	hio_seek(f, start + seq_ptr, SEEK_SET);
 	for (i = 0; ; i++) {
-		uint8 x = read8(f);
+		uint8 x = hio_read8(f);
 		if (x == 0xff)
 			break;
-		m->xxo[i] = x;
+		mod->xxo[i] = x;
 	}
 	for (i++; i % 4; i++)	/* for alignment */
-		read8(f);
+		hio_read8(f);
 
 
 	/* Patterns */
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0)
+		return -1;
 
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	D_(D_INFO "Stored patterns: %d", mod->pat);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC (i);
-		m->xxp[i]->rows = 64;
-		TRACK_ALLOC (i);
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_tracks_alloc(mod, i, 64) < 0)
+			return -1;
 
-		for (j = 0; j < (64 * m->xxh->chn); j++) {
-			event = &EVENT (i, j % m->xxh->chn, j / m->xxh->chn);
-			event->fxp = read8(f);
-			event->fxt = read8(f);
-			event->ins = read8(f);
-			event->note = read8(f);
+		for (j = 0; j < (64 * mod->chn); j++) {
+			event = &EVENT (i, j % mod->chn, j / mod->chn);
+			event->fxp = hio_read8(f);
+			event->fxt = hio_read8(f);
+			event->ins = hio_read8(f);
+			event->note = hio_read8(f);
+			if (event->note)
+				event->note += 12;
 
 			fix_effect(event);
 		}
-
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
 
 	/* Read samples */
 
-	reportv(ctx, 0, "Stored samples : %d ", m->xxh->smp);
+	D_(D_INFO "Stored samples : %d", mod->smp);
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		if (m->xxih[i].nsm == 0)
+	for (i = 0; i < mod->ins; i++) {
+		if (mod->xxi[i].nsm == 0)
 			continue;
 
-		fseek(f, start + smp_ptr[i], SEEK_SET);
-		xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate,
-				XMP_SMP_VIDC, &m->xxs[m->xxi[i][0].sid], NULL);
-		reportv(ctx, 0, ".");
+		hio_seek(f, start + smp_ptr[i], SEEK_SET);
+		if (load_sample(m, f, SAMPLE_FLAG_VIDC, &mod->xxs[i], NULL) < 0)
+			return -1;
 	}
-	reportv(ctx, 0, "\n");
 
-	for (i = 0; i < m->xxh->chn; i++)
-		m->xxc[i].pan = (((i + 3) / 2) % 2) * 0xff;
+	for (i = 0; i < mod->chn; i++) {
+		mod->xxc[i].pan = DEFPAN((((i + 3) / 2) % 2) * 0xff);
+	}
 
 	return 0;
 }

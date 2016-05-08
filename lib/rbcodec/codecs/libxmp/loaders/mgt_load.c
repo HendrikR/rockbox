@@ -1,56 +1,64 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
-#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "libxmp/loaders/loader.h"
+#include "libxmp/period.h"
 
 #define MAGIC_MGT	MAGIC4(0x00,'M','G','T')
 #define MAGIC_MCS	MAGIC4(0xbd,'M','C','S')
 
 
-static int mgt_test (FILE *, char *, const int);
-static int mgt_load (struct xmp_context *, FILE *, const int);
+static int mgt_test (HIO_HANDLE *, char *, const int);
+static int mgt_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info mgt_loader = {
-	"MGT",
+const struct format_loader mgt_loader = {
 	"Megatracker",
 	mgt_test,
 	mgt_load
 };
 
-static int mgt_test(FILE *f, char *t, const int start)
+static int mgt_test(HIO_HANDLE *f, char *t, const int start)
 {
 	int sng_ptr;
 
-	if (read24b(f) != MAGIC_MGT)
+	if (hio_read24b(f) != MAGIC_MGT)
 		return -1;
-	read8(f);
-	if (read32b(f) != MAGIC_MCS)
+	hio_read8(f);
+	if (hio_read32b(f) != MAGIC_MCS)
 		return -1;
 
-	fseek(f, 18, SEEK_CUR);
-	sng_ptr = read32b(f);
-	fseek(f, start + sng_ptr, SEEK_SET);
+	hio_seek(f, 18, SEEK_CUR);
+	sng_ptr = hio_read32b(f);
+	hio_seek(f, start + sng_ptr, SEEK_SET);
 
 	read_title(f, t, 32);
 	
 	return 0;
 }
 
-static int mgt_load(struct xmp_context *ctx, FILE *f, const int start)
+static int mgt_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
-	struct xxm_event *event;
+	struct xmp_module *mod = &m->mod;
+	struct xmp_event *event;
 	int i, j;
 	int ver;
 	int sng_ptr, seq_ptr, ins_ptr, pat_ptr, trk_ptr, smp_ptr;
@@ -58,150 +66,180 @@ static int mgt_load(struct xmp_context *ctx, FILE *f, const int start)
 
 	LOAD_INIT();
 
-	read24b(f);		/* MGT */
-	ver = read8(f);
-	read32b(f);		/* MCS */
+	hio_read24b(f);		/* MGT */
+	ver = hio_read8(f);
+	hio_read32b(f);		/* MCS */
 
-	set_type(m, "MGT v%d.%d (Megatracker)", MSN(ver), LSN(ver));
+	set_type(m, "Megatracker MGT v%d.%d", MSN(ver), LSN(ver));
 
-	m->xxh->chn = read16b(f);
-	read16b(f);			/* number of songs */
-	m->xxh->len = read16b(f);
-	m->xxh->pat = read16b(f);
-	m->xxh->trk = read16b(f);
-	m->xxh->ins = m->xxh->smp = read16b(f);
-	read16b(f);			/* reserved */
-	read32b(f);			/* reserved */
+	mod->chn = hio_read16b(f);
+	hio_read16b(f);			/* number of songs */
+	mod->len = hio_read16b(f);
+	mod->pat = hio_read16b(f);
+	mod->trk = hio_read16b(f);
+	mod->ins = mod->smp = hio_read16b(f);
+	hio_read16b(f);			/* reserved */
+	hio_read32b(f);			/* reserved */
 
-	sng_ptr = read32b(f);
-	seq_ptr = read32b(f);
-	ins_ptr = read32b(f);
-	pat_ptr = read32b(f);
-	trk_ptr = read32b(f);
-	smp_ptr = read32b(f);
-	read32b(f);			/* total smp len */
-	read32b(f);			/* unpacked trk size */
+	/* Sanity check */
+	if (mod->chn > XMP_MAX_CHANNELS || mod->ins > 64) {
+		return -1;
+	}
 
-	fseek(f, start + sng_ptr, SEEK_SET);
+	sng_ptr = hio_read32b(f);
+	seq_ptr = hio_read32b(f);
+	ins_ptr = hio_read32b(f);
+	pat_ptr = hio_read32b(f);
+	trk_ptr = hio_read32b(f);
+	smp_ptr = hio_read32b(f);
+	hio_read32b(f);			/* total smp len */
+	hio_read32b(f);			/* unpacked trk size */
 
-	fread(m->name, 1, 32, f);
-	seq_ptr = read32b(f);
-	m->xxh->len = read16b(f);
-	m->xxh->rst = read16b(f);
-	m->xxh->bpm = read8(f);
-	m->xxh->tpo = read8(f);
-	read16b(f);			/* global volume */
-	read8(f);			/* master L */
-	read8(f);			/* master R */
+	hio_seek(f, start + sng_ptr, SEEK_SET);
 
-	for (i = 0; i < m->xxh->chn; i++) {
-		read16b(f);		/* pan */
+	hio_read(mod->name, 1, 32, f);
+	seq_ptr = hio_read32b(f);
+	mod->len = hio_read16b(f);
+	mod->rst = hio_read16b(f);
+	mod->bpm = hio_read8(f);
+	mod->spd = hio_read8(f);
+	hio_read16b(f);			/* global volume */
+	hio_read8(f);			/* master L */
+	hio_read8(f);			/* master R */
+
+	/* Sanity check */
+	if (mod->len > 256 || mod->rst > 255) {
+		return -1;
+	}
+
+	for (i = 0; i < mod->chn; i++) {
+		hio_read16b(f);		/* pan */
 	}
 	
 	MODULE_INFO();
 
 	/* Sequence */
 
-	fseek(f, start + seq_ptr, SEEK_SET);
-	for (i = 0; i < m->xxh->len; i++)
-		m->xxo[i] = read16b(f);
+	hio_seek(f, start + seq_ptr, SEEK_SET);
+	for (i = 0; i < mod->len; i++) {
+		mod->xxo[i] = hio_read16b(f);
 
-	/* Instruments */
-
-	INSTRUMENT_INIT();
-
-	fseek(f, start + ins_ptr, SEEK_SET);
-	reportv(ctx, 1, "     Name                             Len  LBeg LEnd L Vol C2Spd\n");
-
-	for (i = 0; i < m->xxh->ins; i++) {
-		int c2spd, flags;
-
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
-
-		fread(m->xxih[i].name, 1, 32, f);
-		sdata[i] = read32b(f);
-		m->xxs[i].len = read32b(f);
-		m->xxs[i].lps = read32b(f);
-		m->xxs[i].lpe = m->xxs[i].lps + read32b(f);
-		read32b(f);
-		read32b(f);
-		c2spd = read32b(f);
-		c2spd_to_note(c2spd, &m->xxi[i][0].xpo, &m->xxi[i][0].fin);
-		m->xxi[i][0].vol = read16b(f) >> 4;
-		read8(f);		/* vol L */
-		read8(f);		/* vol R */
-		m->xxi[i][0].pan = 0x80;
-		flags = read8(f);
-		m->xxs[i].flg = flags & 0x03 ? WAVE_LOOPING : 0;
-		m->xxs[i].flg |= flags & 0x02 ? WAVE_BIDIR_LOOP : 0;
-		m->xxi[i][0].fin += 0 * read8(f);	// FIXME
-		read8(f);		/* unused */
-		read8(f);
-		read8(f);
-		read8(f);
-		read16b(f);
-		read32b(f);
-		read32b(f);
-
-		m->xxih[i].nsm = !!m->xxs[i].len;
-		m->xxi[i][0].sid = i;
-		
-		if (V(1) && (strlen((char*)m->xxih[i].name) || (m->xxs[i].len > 1))) {
-			report("[%2X] %-32.32s %04x %04x %04x %c V%02x %5d\n",
-				i, m->xxih[i].name,
-				m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe,
-				m->xxs[i].flg & WAVE_BIDIR_LOOP ? 'B' :
-					m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-				m->xxi[i][0].vol, c2spd);
+		/* Sanity check */
+		if (mod->xxo[i] >= mod->pat) {
+			return -1;
 		}
 	}
 
-	/* PATTERN_INIT - alloc extra track*/
-	PATTERN_INIT();
+	/* Instruments */
 
-	reportv(ctx, 0, "Stored tracks  : %d ", m->xxh->trk);
+	if (instrument_init(mod) < 0)
+		return -1;
+
+	hio_seek(f, start + ins_ptr, SEEK_SET);
+
+	for (i = 0; i < mod->ins; i++) {
+		int c2spd, flags;
+
+		if (subinstrument_alloc(mod, i , 1) < 0)
+			return -1;
+
+		hio_read(mod->xxi[i].name, 1, 32, f);
+		sdata[i] = hio_read32b(f);
+		mod->xxs[i].len = hio_read32b(f);
+
+		/* Sanity check */
+		if (mod->xxs[i].len > MAX_SAMPLE_SIZE) {
+			return -1;
+		}
+
+		mod->xxs[i].lps = hio_read32b(f);
+		mod->xxs[i].lpe = mod->xxs[i].lps + hio_read32b(f);
+		hio_read32b(f);
+		hio_read32b(f);
+		c2spd = hio_read32b(f);
+		c2spd_to_note(c2spd, &mod->xxi[i].sub[0].xpo, &mod->xxi[i].sub[0].fin);
+		mod->xxi[i].sub[0].vol = hio_read16b(f) >> 4;
+		hio_read8(f);		/* vol L */
+		hio_read8(f);		/* vol R */
+		mod->xxi[i].sub[0].pan = 0x80;
+		flags = hio_read8(f);
+		mod->xxs[i].flg = flags & 0x03 ? XMP_SAMPLE_LOOP : 0;
+		mod->xxs[i].flg |= flags & 0x02 ? XMP_SAMPLE_LOOP_BIDIR : 0;
+		mod->xxi[i].sub[0].fin += 0 * hio_read8(f);	// FIXME
+		hio_read8(f);		/* unused */
+		hio_read8(f);
+		hio_read8(f);
+		hio_read8(f);
+		hio_read16b(f);
+		hio_read32b(f);
+		hio_read32b(f);
+
+		mod->xxi[i].nsm = !!mod->xxs[i].len;
+		mod->xxi[i].sub[0].sid = i;
+		
+		D_(D_INFO "[%2X] %-32.32s %04x %04x %04x %c V%02x %5d\n",
+				i, mod->xxi[i].name,
+				mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,
+				mod->xxs[i].flg & XMP_SAMPLE_LOOP_BIDIR ? 'B' :
+				mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+				mod->xxi[i].sub[0].vol, c2spd);
+	}
+
+	/* PATTERN_INIT - alloc extra track*/
+	if (pattern_init(mod) < 0)
+		return -1;
+
+	D_(D_INFO "Stored tracks: %d", mod->trk);
 
 	/* Tracks */
 
-	for (i = 1; i < m->xxh->trk; i++) {
+	for (i = 1; i < mod->trk; i++) {
 		int offset, rows;
 		uint8 b;
 
-		fseek(f, start + trk_ptr + i * 4, SEEK_SET);
-		offset = read32b(f);
-		fseek(f, start + offset, SEEK_SET);
+		hio_seek(f, start + trk_ptr + i * 4, SEEK_SET);
+		offset = hio_read32b(f);
+		hio_seek(f, start + offset, SEEK_SET);
 
-		rows = read16b(f);
-		m->xxt[i] = calloc(sizeof(struct xxm_track) +
-				sizeof(struct xxm_event) * rows, 1);
-		m->xxt[i]->rows = rows;
+		rows = hio_read16b(f);
+
+		/* Sanity check */
+		if (rows > 255)
+			return -1;
+
+		if (track_alloc(mod, i, rows) < 0)
+			return -1;
 
 		//printf("\n=== Track %d ===\n\n", i);
 		for (j = 0; j < rows; j++) {
 			uint8 note, f2p;
 
-			b = read8(f);
+			b = hio_read8(f);
 			j += b & 0x03;
 
+			/* Sanity check */
+			if (j >= rows)
+				return -1;
+
 			note = 0;
-			event = &m->xxt[i]->event[j];
+			event = &mod->xxt[i]->event[j];
 			if (b & 0x04)
-				note = read8(f);
+				note = hio_read8(f);
 			if (b & 0x08)
-				event->ins = read8(f);
+				event->ins = hio_read8(f);
 			if (b & 0x10)
-				event->vol = read8(f);
+				event->vol = hio_read8(f);
 			if (b & 0x20)
-				event->fxt = read8(f);
+				event->fxt = hio_read8(f);
 			if (b & 0x40)
-				event->fxp = read8(f);
+				event->fxp = hio_read8(f);
 			if (b & 0x80)
-				f2p = read8(f);
+				f2p = hio_read8(f);
 
 			if (note == 1)
 				event->note = XMP_KEY_OFF;
 			else if (note > 11) /* adjusted to play codeine.mgt */
-				event->note = note - 11;
+				event->note = note + 1;
 
 			/* effects */
 			if (event->fxt < 0x10)
@@ -279,50 +317,59 @@ static int mgt_load(struct xmp_context *ctx, FILE *f, const int start)
 				j, event->note, event->ins, event->vol,
 				event->fxt, event->fxp);*/
 		}
-
-		if (V(0) && i % m->xxh->chn == 0)
-			report(".");
 	}
-	reportv(ctx, 0, "\n");
 
 	/* Extra track */
-	m->xxt[0] = calloc(sizeof(struct xxm_track) +
-			sizeof(struct xxm_event) * 64 - 1, 1);
-	m->xxt[0]->rows = 64;
+	if (mod->trk > 0) {
+		mod->xxt[0] = calloc(sizeof(struct xmp_track) +
+			sizeof(struct xmp_event) * 64 - 1, 1);
+		mod->xxt[0]->rows = 64;
+	}
 
 	/* Read and convert patterns */
+	D_(D_INFO "Stored patterns: %d", mod->pat);
 
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
-	fseek(f, start + pat_ptr, SEEK_SET);
+	hio_seek(f, start + pat_ptr, SEEK_SET);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC(i);
+	for (i = 0; i < mod->pat; i++) {
+		int rows;
 
-		m->xxp[i]->rows = read16b(f);
-		for (j = 0; j < m->xxh->chn; j++) {
-			m->xxp[i]->info[j].index = read16b(f) - 1;
-			//printf("%3d ", m->xxp[i]->info[j].index);
+		if (pattern_alloc(mod, i) < 0)
+			return -1;
+
+		rows = hio_read16b(f);
+
+		/* Sanity check */
+		if (rows > 256) {
+			return -1;
 		}
 
-		reportv(ctx, 0, ".");
-		//printf("\n");
+		mod->xxp[i]->rows = rows;
+
+		for (j = 0; j < mod->chn; j++) {
+			int track = hio_read16b(f) - 1;
+
+			/* Sanity check */
+			if (track >= mod->trk) {
+				return -1;
+			}
+
+			mod->xxp[i]->index[j] = track;
+		}
 	}
-	reportv(ctx, 0, "\n");
 
 	/* Read samples */
 
-	reportv(ctx, 0, "Stored samples : %d ", m->xxh->smp);
+	D_(D_INFO "Stored samples: %d", mod->smp);
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		if (m->xxih[i].nsm == 0)
+	for (i = 0; i < mod->ins; i++) {
+		if (mod->xxi[i].nsm == 0)
 			continue;
 
-		fseek(f, start + sdata[i], SEEK_SET);
-		xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate, 0,
-						&m->xxs[m->xxi[i][0].sid], NULL);
-		reportv(ctx, 0, ".");
+		hio_seek(f, start + sdata[i], SEEK_SET);
+		if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+			return -1;
 	}
-	reportv(ctx, 0, "\n");
 
 	return 0;
 }

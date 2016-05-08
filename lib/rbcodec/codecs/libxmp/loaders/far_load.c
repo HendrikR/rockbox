@@ -1,9 +1,23 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /* Based on the Farandole Composer format specifications by Daniel Potter.
@@ -12,30 +26,64 @@
  * working on) so it may include information not completely neccessary."
  */
 
+#include "libxmp/loaders/loader.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+struct far_header {
+	uint32 magic;		/* File magic: 'FAR\xfe' */
+	uint8 name[40];		/* Song name */
+	uint8 crlf[3];		/* 0x0d 0x0a 0x1A */
+	uint16 headersize;	/* Remaining header size in bytes */
+	uint8 version;		/* Version MSN=major, LSN=minor */
+	uint8 ch_on[16];	/* Channel on/off switches */
+	uint8 rsvd1[9];		/* Current editing values */
+	uint8 tempo;		/* Default tempo */
+	uint8 pan[16];		/* Channel pan definitions */
+	uint8 rsvd2[4];		/* Grid, mode (for editor) */
+	uint16 textlen;		/* Length of embedded text */
+};
 
-#include "load.h"
-#include "far.h"
+struct far_header2 {
+	uint8 order[256];	/* Orders */
+	uint8 patterns;		/* Number of stored patterns (?) */
+	uint8 songlen;		/* Song length in patterns */
+	uint8 restart;		/* Restart pos */
+	uint16 patsize[256];	/* Size of each pattern in bytes */
+};
+
+struct far_instrument {
+	uint8 name[32];		/* Instrument name */
+	uint32 length;		/* Length of sample (up to 64Kb) */
+	uint8 finetune;		/* Finetune (unsuported) */
+	uint8 volume;		/* Volume (unsuported?) */
+	uint32 loop_start;	/* Loop start */
+	uint32 loopend;		/* Loop end */
+	uint8 sampletype;	/* 1=16 bit sample */
+	uint8 loopmode;
+};
+
+struct far_event {
+	uint8 note;
+	uint8 instrument;
+	uint8 volume;		/* In reverse nibble order? */
+	uint8 effect;
+};
+
 
 #define MAGIC_FAR	MAGIC4('F','A','R',0xfe)
 
 
-static int far_test (FILE *, char *, const int);
-static int far_load (struct xmp_context *, FILE *, const int);
+static int far_test (HIO_HANDLE *, char *, const int);
+static int far_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info far_loader = {
-    "FAR",
+const struct format_loader far_loader = {
     "Farandole Composer",
     far_test,
     far_load
 };
 
-static int far_test(FILE *f, char *t, const int start)
+static int far_test(HIO_HANDLE *f, char *t, const int start)
 {
-    if (read32b(f) != MAGIC_FAR)
+    if (hio_read32b(f) != MAGIC_FAR)
 	return -1;
 
     read_title(f, t, 40);
@@ -53,7 +101,7 @@ static int far_test(FILE *f, char *t, const int start)
 #define FX_FAR_PORTA_UP		0xf9
 #define FX_FAR_PORTA_DN		0xf8
 
-static uint8 fx[] = {
+static const uint8 fx[] = {
     NONE,
     FX_FAR_PORTA_UP,		/* 0x1?  Pitch Adjust */
     FX_FAR_PORTA_DN,		/* 0x2?  Pitch Adjust */
@@ -69,16 +117,15 @@ static uint8 fx[] = {
     FX_FAR_DELAY,		/* 0xc?  Note Offset */
     NONE,			/* 0xd?  Fine Tempo dn */
     NONE,			/* 0xe?  Fine Tempo up */
-    FX_TEMPO			/* 0xf?  Tempo */
+    FX_SPEED			/* 0xf?  Tempo */
 };
 
 
-static int far_load(struct xmp_context *ctx, FILE *f, const int start)
+static int far_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
+    struct xmp_module *mod = &m->mod;
     int i, j, vib = 0;
-    struct xxm_event *event;
+    struct xmp_event *event;
     struct far_header ffh;
     struct far_header2 ffh2;
     struct far_instrument fih;
@@ -86,80 +133,101 @@ static int far_load(struct xmp_context *ctx, FILE *f, const int start)
 
     LOAD_INIT();
 
-    read32b(f);				/* File magic: 'FAR\xfe' */
-    fread(&ffh.name, 40, 1, f);		/* Song name */
-    fread(&ffh.crlf, 3, 1, f);		/* 0x0d 0x0a 0x1A */
-    ffh.headersize = read16l(f);	/* Remaining header size in bytes */
-    ffh.version = read8(f);		/* Version MSN=major, LSN=minor */
-    fread(&ffh.ch_on, 16, 1, f);	/* Channel on/off switches */
-    fseek(f, 9, SEEK_CUR);		/* Current editing values */
-    ffh.tempo = read8(f);		/* Default tempo */
-    fread(&ffh.pan, 16, 1, f);		/* Channel pan definitions */
-    read32l(f);				/* Grid, mode (for editor) */
-    ffh.textlen = read16l(f);		/* Length of embedded text */
+    hio_read32b(f);			/* File magic: 'FAR\xfe' */
+    hio_read(&ffh.name, 40, 1, f);	/* Song name */
+    hio_read(&ffh.crlf, 3, 1, f);	/* 0x0d 0x0a 0x1A */
+    ffh.headersize = hio_read16l(f);	/* Remaining header size in bytes */
+    ffh.version = hio_read8(f);		/* Version MSN=major, LSN=minor */
+    hio_read(&ffh.ch_on, 16, 1, f);	/* Channel on/off switches */
+    hio_seek(f, 9, SEEK_CUR);		/* Current editing values */
+    ffh.tempo = hio_read8(f);		/* Default tempo */
+    hio_read(&ffh.pan, 16, 1, f);	/* Channel pan definitions */
+    hio_read32l(f);			/* Grid, mode (for editor) */
+    ffh.textlen = hio_read16l(f);	/* Length of embedded text */
 
-    fseek(f, ffh.textlen, SEEK_CUR);	/* Skip song text */
-
-    fread(&ffh2.order, 256, 1, f);	/* Orders */
-    ffh2.patterns = read8(f);		/* Number of stored patterns (?) */
-    ffh2.songlen = read8(f);		/* Song length in patterns */
-    ffh2.restart = read8(f);		/* Restart pos */
-    for (i = 0; i < 256; i++)
-	ffh2.patsize[i] = read16l(f);	/* Size of each pattern in bytes */
-
-    m->xxh->chn = 16;
-    /*m->xxh->pat=ffh2.patterns; (Error in specs? --claudio) */
-    m->xxh->len = ffh2.songlen;
-    m->xxh->tpo = 6;
-    m->xxh->bpm = 8 * 60 / ffh.tempo;
-    memcpy (m->xxo, ffh2.order, m->xxh->len);
-
-    for (m->xxh->pat = i = 0; i < 256; i++) {
-	if (ffh2.patsize[i])
-	    m->xxh->pat = i + 1;
+    /* Sanity check */
+    if (ffh.tempo == 0) {
+	return -1;
     }
 
-    m->xxh->trk = m->xxh->chn * m->xxh->pat;
+    hio_seek(f, ffh.textlen, SEEK_CUR);	/* Skip song text */
 
-    strncpy(m->name, (char *)ffh.name, 40);
-    set_type(m, "FAR (Farandole Composer %d.%d)",
-				MSN(ffh.version), LSN(ffh.version));
+    hio_read(&ffh2.order, 256, 1, f);	/* Orders */
+    ffh2.patterns = hio_read8(f);	/* Number of stored patterns (?) */
+    ffh2.songlen = hio_read8(f);	/* Song length in patterns */
+    ffh2.restart = hio_read8(f);	/* Restart pos */
+    for (i = 0; i < 256; i++) {
+	ffh2.patsize[i] = hio_read16l(f); /* Size of each pattern in bytes */
+    }
+
+    if (hio_error(f)) {
+        return -1;
+    }
+
+    mod->chn = 16;
+    /*mod->pat=ffh2.patterns; (Error in specs? --claudio) */
+    mod->len = ffh2.songlen;
+    mod->spd = 6;
+    mod->bpm = 8 * 60 / ffh.tempo;
+    memcpy (mod->xxo, ffh2.order, mod->len);
+
+    for (mod->pat = i = 0; i < 256; i++) {
+	if (ffh2.patsize[i])
+	    mod->pat = i + 1;
+    }
+
+    mod->trk = mod->chn * mod->pat;
+
+    strncpy(mod->name, (char *)ffh.name, 40);
+    set_type(m, "Farandole Composer %d.%d", MSN(ffh.version), LSN(ffh.version));
 
     MODULE_INFO();
 
-    PATTERN_INIT();
+    if (pattern_init(mod) < 0)
+	return -1;
 
     /* Read and convert patterns */
-    if (V(0)) {
-	report("Comment bytes  : %d\n", ffh.textlen);
-	report("Stored patterns: %d ", m->xxh->pat);
-    }
+    D_(D_INFO "Comment bytes  : %d", ffh.textlen);
+    D_(D_INFO "Stored patterns: %d", mod->pat);
 
-    for (i = 0; i < m->xxh->pat; i++) {
+    for (i = 0; i < mod->pat; i++) {
 	uint8 brk, note, ins, vol, fxb;
+	int rows;
 
-	PATTERN_ALLOC(i);
+	if (pattern_alloc(mod, i) < 0)
+	    return -1;
+
 	if (!ffh2.patsize[i])
 	    continue;
-	m->xxp[i]->rows = (ffh2.patsize[i] - 2) / 64;
-	TRACK_ALLOC(i);
 
-	brk = read8(f) + 1;
-	read8(f);
+	rows = (ffh2.patsize[i] - 2) / 64;
 
-	for (j = 0; j < m->xxp[i]->rows * m->xxh->chn; j++) {
-	    event = &EVENT(i, j % m->xxh->chn, j / m->xxh->chn);
+	/* Sanity check */
+	if (rows <= 0 || rows > 256) {
+	    return -1;
+	}
 
-	    if ((j % m->xxh->chn) == 0 && (j / m->xxh->chn) == brk)
+	mod->xxp[i]->rows = rows;
+
+	if (tracks_in_pattern_alloc(mod, i) < 0)
+	    return -1;
+
+	brk = hio_read8(f) + 1;
+	hio_read8(f);
+
+	for (j = 0; j < mod->xxp[i]->rows * mod->chn; j++) {
+	    event = &EVENT(i, j % mod->chn, j / mod->chn);
+
+	    if ((j % mod->chn) == 0 && (j / mod->chn) == brk)
 		event->f2t = FX_BREAK;
 	
-	    note = read8(f);
-	    ins = read8(f);
-	    vol = read8(f);
-	    fxb = read8(f);
+	    note = hio_read8(f);
+	    ins = hio_read8(f);
+	    vol = hio_read8(f);
+	    fxb = hio_read8(f);
 
 	    if (note)
-		event->note = note + 36;
+		event->note = note + 48;
 	    if (event->note || ins)
 		event->ins = ins + 1;
 
@@ -209,67 +277,82 @@ static int far_load(struct xmp_context *ctx, FILE *f, const int start)
 		event->fxt = FX_EXTENDED;
 		event->fxp |= (EX_F_VSLIDE_DN << 4);
 		break;
-	    case FX_TEMPO:
-		event->fxp = 8 * 60 / event->fxp;
+	    case FX_SPEED:
+		if (event->fxp != 0) {
+			event->fxp = 8 * 60 / event->fxp;
+		} else {
+			event->fxt = 0;
+		}
 		break;
 	    }
 	}
-	reportv(ctx, 0, ".");
     }
 
-    m->xxh->ins = -1;
-    fread(sample_map, 1, 8, f);
+    mod->ins = -1;
+    hio_read(sample_map, 1, 8, f);
     for (i = 0; i < 64; i++) {
 	if (sample_map[i / 8] & (1 << (i % 8)))
-		m->xxh->ins = i;
+		mod->ins = i;
     }
-    m->xxh->ins++;
+    mod->ins++;
 
-    m->xxh->smp = m->xxh->ins;
+    mod->smp = mod->ins;
 
-    INSTRUMENT_INIT();
+    if (instrument_init(mod) < 0)
+	return -1;
 
     /* Read and convert instruments and samples */
-    reportv(ctx, 0, "\nInstruments    : %d ", m->xxh->ins);
 
-    for (i = 0; i < m->xxh->ins; i++) {
+    for (i = 0; i < mod->ins; i++) {
 	if (!(sample_map[i / 8] & (1 << (i % 8))))
 		continue;
 
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
+	if (subinstrument_alloc(mod, i, 1) < 0)
+	    return -1;
 
-	fread(&fih.name, 32, 1, f);	/* Instrument name */
-	fih.length = read32l(f);	/* Length of sample (up to 64Kb) */
-	fih.finetune = read8(f);	/* Finetune (unsuported) */
-	fih.volume = read8(f);		/* Volume (unsuported?) */
-	fih.loop_start = read32l(f);	/* Loop start */
-	fih.loopend = read32l(f);	/* Loop end */
-	fih.sampletype = read8(f);	/* 1=16 bit sample */
-	fih.loopmode = read8(f);
+	hio_read(&fih.name, 32, 1, f);	/* Instrument name */
+	fih.length = hio_read32l(f);	/* Length of sample (up to 64Kb) */
+	fih.finetune = hio_read8(f);	/* Finetune (unsuported) */
+	fih.volume = hio_read8(f);	/* Volume (unsuported?) */
+	fih.loop_start = hio_read32l(f);/* Loop start */
+	fih.loopend = hio_read32l(f);	/* Loop end */
+	fih.sampletype = hio_read8(f);	/* 1=16 bit sample */
+	fih.loopmode = hio_read8(f);
 
-	fih.length &= 0xffff;
-	fih.loop_start &= 0xffff;
-	fih.loopend &= 0xffff;
-	m->xxih[i].nsm = !!(m->xxs[i].len = fih.length);
-	m->xxs[i].lps = fih.loop_start;
-	m->xxs[i].lpe = fih.loopend;
-	m->xxs[i].flg = fih.sampletype ? WAVE_16_BITS : 0;
-	m->xxs[i].flg |= fih.loopmode ? WAVE_LOOPING : 0;
-	m->xxi[i][0].vol = 0xff; /* fih.volume; */
-	m->xxi[i][0].sid = i;
-
-	copy_adjust(m->xxih[i].name, fih.name, 32);
-
-	if (V(1) && (strlen((char *)m->xxih[i].name) || m->xxs[i].len) && m->xxs[i].lps != 0xffff) {
-	    report ("\n[%2X] %-32.32s %04x %04x %04x %c V%02x ",
-			i, m->xxih[i].name,
-			m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe,
-			fih.loopmode ? 'L' : ' ', m->xxi[i][0].vol);
-	    reportv(ctx, 0, ".");
+	/* Sanity check */
+	if (fih.length > 0x10000 || fih.loop_start > 0x10000 ||
+            fih.loopend > 0x10000) {
+		return -1;
 	}
-	xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate, 0, &m->xxs[i], NULL);
+
+	mod->xxs[i].len = fih.length;
+	mod->xxs[i].lps = fih.loop_start;
+	mod->xxs[i].lpe = fih.loopend;
+	mod->xxs[i].flg = 0;
+
+	if (mod->xxs[i].len > 0)
+		mod->xxi[i].nsm = 1;
+
+	if (fih.sampletype != 0) {
+		mod->xxs[i].flg |= XMP_SAMPLE_16BIT;
+		mod->xxs[i].len >>= 1;
+		mod->xxs[i].lps >>= 1;
+		mod->xxs[i].lpe >>= 1;
+	}
+
+	mod->xxs[i].flg |= fih.loopmode ? XMP_SAMPLE_LOOP : 0;
+	mod->xxi[i].sub[0].vol = 0xff; /* fih.volume; */
+	mod->xxi[i].sub[0].sid = i;
+
+	instrument_name(mod, i, fih.name, 32);
+
+	D_(D_INFO "[%2X] %-32.32s %04x %04x %04x %c V%02x",
+		i, mod->xxi[i].name, mod->xxs[i].len, mod->xxs[i].lps,
+		mod->xxs[i].lpe, fih.loopmode ? 'L' : ' ', mod->xxi[i].sub[0].vol);
+
+	if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+		return -1;
     }
-    reportv(ctx, 0, "\n");
 
     m->volbase = 0xff;
 

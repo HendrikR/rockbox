@@ -1,30 +1,25 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
  * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
+ * under the terms of the GNU Lesser General Public License. See COPYING.LIB
  * for more information.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
-#include "../lib/rbcodec/codecs/libxmp/include/period.h"
-#include "../lib/rbcodec/codecs/libxmp/include/spectrum.h"
+#include "libxmp/loaders/loader.h"
+#include "libxmp/period.h"
+#include "libxmp/spectrum.h"
 
 /* ZX Spectrum Sound Tracker loader
  * Sound Tracker written by Jarek Burczynski (Bzyk), 1990
  */
 
-static int stc_test(FILE *, char *, const int);
-static int stc_load(struct xmp_context *, FILE *, const int);
+static int stc_test(HIO_HANDLE *, char *, const int);
+static int stc_load(struct module_data *, HIO_HANDLE *, const int);
 
 
-struct xmp_loader_info stc_loader = {
-	"STC",
-	"Sound Tracker",
+const struct format_loader stc_loader = {
+	"ZX Spectrum Sound Tracker (STC)",
 	stc_test,
 	stc_load
 };
@@ -41,58 +36,59 @@ struct stc_pat {
 	int ch[3];
 };
 
-static int stc_test(FILE * f, char *t, const int start)
+static int stc_test(HIO_HANDLE * f, char *t, const int start)
 {
 	int pos_ptr, orn_ptr, pat_ptr;
 	int i, len, max_pat;
-	//char buf[8];
 
-	fseek(f, start, SEEK_SET);
+	hio_seek(f, start, SEEK_SET);
 
-	if (read8(f) > 0x20)			/* Check tempo */
+	if (hio_read8(f) > 0x20)			/* Check tempo */
 		return -1;
 
-	pos_ptr = read16l(f);			/* Positions pointer */
-	orn_ptr = read16l(f);			/* Ornaments pointer */
-	pat_ptr = read16l(f);			/* Patterns pointer */
+	pos_ptr = hio_read16l(f);			/* Positions pointer */
+	orn_ptr = hio_read16l(f);			/* Ornaments pointer */
+	pat_ptr = hio_read16l(f);			/* Patterns pointer */
 
 	if (pos_ptr < 138 || orn_ptr < 138 || pat_ptr < 138)
 		return -1;
 
-	fseek(f, start + pos_ptr, SEEK_SET);
-	len = read8(f) + 1;
+	hio_seek(f, start + pos_ptr, SEEK_SET);
+	len = hio_read8(f) + 1;
 
 	for (max_pat = i = 0; i < len; i++) {
-		int pat = read8(f);
+		int pat = hio_read8(f);
 		if (pat > MAX_PAT)		/* Check orders */
 			return -1;
 		if (pat > max_pat)
 			max_pat = pat;
-		read8(f);
+		hio_read8(f);
 	}
 
-	fseek(f, pat_ptr, SEEK_SET);
+	hio_seek(f, pat_ptr, SEEK_SET);
 
 	for (i = 0; i < max_pat; i++) {
-		int num = read8(f);		/* Check track pointers */
+		int num = hio_read8(f);		/* Check track pointers */
 		if (num != (i + 1))
 			return -1;
-		read16l(f);
-		read16l(f);
-		read16l(f);
+		hio_read16l(f);
+		hio_read16l(f);
+		hio_read16l(f);
 	}
 
-	if (read8(f) != 0xff)
+	if (hio_read8(f) != 0xff)
 		return -1;
+
+	hio_seek(f, start + 7, SEEK_SET);
+	read_title(f, t, 18);
 
 	return 0;
 }
 
-static int stc_load(struct xmp_context *ctx, FILE * f, const int start)
+static int stc_load(struct module_data *m, HIO_HANDLE * f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
-	struct xxm_event *event /*, *noise*/;
+	struct xmp_module *mod = &m->mod;
+	struct xmp_event *event /*, *noise*/;
 	int i, j;
 	uint8 buf[100];
 	int pos_ptr, orn_ptr, pat_ptr;
@@ -104,91 +100,91 @@ static int stc_load(struct xmp_context *ctx, FILE * f, const int start)
 
 	LOAD_INIT();
 
-	m->xxh->tpo = read8(f);		/* Tempo */
-	pos_ptr = read16l(f);		/* Positions pointer */
-	orn_ptr = read16l(f);		/* Ornaments pointer */
-	pat_ptr = read16l(f);		/* Patterns pointer */
+	mod->spd = hio_read8(f);		/* Speed */
+	pos_ptr = hio_read16l(f);		/* Positions pointer */
+	orn_ptr = hio_read16l(f);		/* Ornaments pointer */
+	pat_ptr = hio_read16l(f);		/* Patterns pointer */
 
-	fread(buf, 18, 1, f);		/* Title */
-	copy_adjust((uint8 *)m->name, (uint8 *)buf, 18);
-	strcpy(m->type, "STC (ZX Spectrum Sound Tracker)");
+	hio_read(buf, 18, 1, f);		/* Title */
+	copy_adjust(mod->name, (uint8 *)buf, 18);
+	set_type(m, "ZX Spectrum Sound Tracker");
 
-	read16l(f);			/* Size */
+	hio_read16l(f);			/* Size */
 
 	/* Read orders */
 
-	fseek(f, pos_ptr, SEEK_SET);
-	m->xxh->len = read8(f) + 1;
+	hio_seek(f, pos_ptr, SEEK_SET);
+	mod->len = hio_read8(f) + 1;
 
-	for (num = i = 0; i < m->xxh->len; i++) {
-		stc_ord[i].pattern = read8(f);
-		stc_ord[i].height = read8s(f);
+	for (num = i = 0; i < mod->len; i++) {
+		stc_ord[i].pattern = hio_read8(f);
+		stc_ord[i].height = hio_read8s(f);
 		//printf("%d %d -- ", stc_ord[i].pattern, stc_ord[i].height);
 
 		for (flag = j = 0; j < i; j++) {
 			if (stc_ord[i].pattern == stc_ord[j].pattern &&
 				stc_ord[i].height == stc_ord[j].height)
 			{
-				m->xxo[i] = m->xxo[j];
+				mod->xxo[i] = mod->xxo[j];
 				flag = 1;
 				break;
 			}
 		}
 		if (!flag) {
-			m->xxo[i] = num++;
+			mod->xxo[i] = num++;
 		}
-		//printf("%d\n", m->xxo[i]);
+		//printf("%d\n", mod->xxo[i]);
 	}
 
-	m->xxh->chn = 3;
-	m->xxh->pat = num;
-	m->xxh->trk = m->xxh->pat * m->xxh->chn;
-	m->xxh->ins = 15;
-	m->xxh->smp = m->xxh->ins;
+	mod->chn = 3;
+	mod->pat = num;
+	mod->trk = mod->pat * mod->chn;
+	mod->ins = 15;
+	mod->smp = mod->ins;
 	orn = (pat_ptr - orn_ptr) / 33;
 
 	MODULE_INFO();
 
 	/* Read patterns */
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0)
+		return -1;
 
-	fseek(f, pat_ptr, SEEK_SET);
-	decoded = calloc(m->xxh->pat, sizeof(int));
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	hio_seek(f, pat_ptr, SEEK_SET);
+	decoded = calloc(mod->pat, sizeof(int));
+	D_(D_INFO "Stored patterns: %d ", mod->pat);
 
 	for (i = 0; i < MAX_PAT; i++) {
-		if (read8(f) == 0xff)
+		if (hio_read8(f) == 0xff)
 			break;
-		stc_pat[i].ch[0] = read16l(f);
-		stc_pat[i].ch[1] = read16l(f);
-		stc_pat[i].ch[2] = read16l(f);
+		stc_pat[i].ch[0] = hio_read16l(f);
+		stc_pat[i].ch[1] = hio_read16l(f);
+		stc_pat[i].ch[2] = hio_read16l(f);
 	}
 
-	for (i = 0; i < m->xxh->len; i++) {		/* pattern */
+	for (i = 0; i < mod->len; i++) {		/* pattern */
 		int src = stc_ord[i].pattern - 1;
-		int dest = m->xxo[i];
+		int dest = mod->xxo[i];
 		int trans = stc_ord[i].height;
 
 		if (decoded[dest])
 			continue;
 
-		//printf("%d/%d) Read pattern %d -> %d\n", i, m->xxh->len, src, dest);
+		//printf("%d/%d) Read pattern %d -> %d\n", i, mod->len, src, dest);
 
-		PATTERN_ALLOC(dest);
-		m->xxp[dest]->rows = 64;
-		TRACK_ALLOC(dest);
+		if (pattern_tracks_alloc(mod, dest, 64) < 0)
+			return -1;
 
 		for (j = 0; j < 3; j++) {		/* row */
 			int row = 0;
 			int x;
 			int rowinc = 0;
 	
-			fseek(f, stc_pat[src].ch[j], SEEK_SET);
+			hio_seek(f, stc_pat[src].ch[j], SEEK_SET);
 
 			do {
 				for (;;) {
-					x = read8(f);
+					x = hio_read8(f);
 
 					if (x == 0xff)
 						break;
@@ -197,7 +193,7 @@ static int stc_load(struct xmp_context *ctx, FILE * f, const int start)
 					event = &EVENT(dest, j, row);
 				
 					if (x <= 0x5f) {
-						event->note = x + 6 + trans;
+						event->note = x + 18 + trans;
 						row += 1 + rowinc;
 						break;
 					}
@@ -225,9 +221,9 @@ static int stc_load(struct xmp_context *ctx, FILE * f, const int start)
 						/* envelope */
 						event->fxt = FX_SYNTH_0 +
 							x - 0x80;      /* R13 */
-						event->fxp = read8(f); /* R11 */
+						event->fxp = hio_read8(f); /* R11 */
 						event->f2t = FX_SYNTH_1;
-						event->f2p = read8(f); /* R12 */
+						event->f2p = hio_read8(f); /* R12 */
 					} else {
 						rowinc = x - 0xa1;
 					}
@@ -236,32 +232,31 @@ static int stc_load(struct xmp_context *ctx, FILE * f, const int start)
 		}
 
 		decoded[dest] = 1;
-
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
 
 	free(decoded);
 
 	/* Read instruments */
 
-	INSTRUMENT_INIT();
+	if (instrument_init(mod) < 0)
+		return -1;
 
-	fseek(f, 27, SEEK_SET);
+	hio_seek(f, 27, SEEK_SET);
 
-	reportv(ctx, 0, "Instruments    : %d ", m->xxh->ins);
-	for (i = 0; i < m->xxh->ins; i++) {
+	D_(D_INFO "Instruments: %d", mod->ins);
+	for (i = 0; i < mod->ins; i++) {
 		struct spectrum_sample ss;
 
 		memset(&ss, 0, sizeof (struct spectrum_sample));
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
-		m->xxih[i].nsm = 1;
-		m->xxi[i][0].vol = 0x40;
-		m->xxi[i][0].pan = 0x80;
-		m->xxi[i][0].xpo = -1;
-		m->xxi[i][0].sid = i;
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
+		mod->xxi[i].nsm = 1;
+		mod->xxi[i].sub[0].vol = 0x40;
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxi[i].sub[0].xpo = -1;
+		mod->xxi[i].sub[0].sid = i;
 
-		fread(buf, 1, 99, f);
+		hio_read(buf, 1, 99, f);
 
 		if (buf[97] == 0) {
 			ss.loop = 32;
@@ -327,41 +322,37 @@ static int stc_load(struct xmp_context *ctx, FILE * f, const int start)
 			
 		}
 
-		xmp_drv_loadpatch(ctx, f, i, 0, XMP_SMP_SPECTRUM, NULL,
-								(char *)&ss);
-
-		reportv(ctx, 0, ".");
+		if (load_sample(m, f, SAMPLE_FLAG_SPECTRUM, &mod->xxs[i],
+							(char *)&ss) < 0) {
+			return -1;
+		}
 	}
-	reportv(ctx, 0, "\n");
 	
 	/* Read ornaments */
 
-	fseek(f, orn_ptr, SEEK_SET);
+	hio_seek(f, orn_ptr, SEEK_SET);
 	m->extra = calloc(1, sizeof (struct spectrum_extra));
 	se = m->extra;
 
-	reportv(ctx, 0, "Ornaments      : %d ", orn);
+	D_(D_INFO "Ornaments: %d", orn);
 	for (i = 0; i < orn; i++) {
 		int index;
 		struct spectrum_ornament *so;
 
-		index = read8(f);		
+		index = hio_read8(f);		
 
 		so = &se->ornament[index];
 		so->length = 32;
 		so->loop = 31;
 
 		for (j = 0; j < 32; j++) {
-			so->val[j] = read8s(f);
+			so->val[j] = hio_read8s(f);
 		}
-
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
 
 	for (i = 0; i < 4; i++) {
-		m->xxc[i].pan = 0x80;
-		m->xxc[i].flg = XXM_CHANNEL_SYNTH;
+		mod->xxc[i].pan = 0x80;
+		mod->xxc[i].flg = XMP_CHANNEL_SYNTH;
 	}
 	
 	m->synth = &synth_spectrum;

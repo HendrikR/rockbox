@@ -1,11 +1,5 @@
-/* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
- *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
- */
-
+#ifndef LIBXMP_LOADERS_XM_H
+#define LIBXMP_LOADERS_XM_H
 
 #define XM_EVENT_PACKING 0x80
 #define XM_EVENT_PACK_MASK 0x7f
@@ -23,7 +17,6 @@
 #define XM_ENVELOPE_ON 0x01
 #define XM_ENVELOPE_SUSTAIN 0x02
 #define XM_ENVELOPE_LOOP 0x04
-#define XM_END_OF_SONG 0x80	/* Undocumented */
 #define XM_LINEAR_PERIOD_MODE 0x01
 
 
@@ -104,3 +97,5 @@ struct xm_event {
 	uint8 fx_type;		/* Effect type */
 	uint8 fx_parm;		/* Effect parameter */
 };
+
+#endif

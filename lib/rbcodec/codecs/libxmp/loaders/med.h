@@ -1,19 +1,14 @@
-/* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
- *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
- */
+#ifndef LIBXMP_MED_H
+#define LIBXMP_MED_H
 
-#include "../lib/rbcodec/codecs/libxmp/include/common.h"
-
+#include "libxmp/common.h"
+#include "libxmp/hio.h"
 
 #define MMD_INST_TYPES 9
-extern char *mmd_inst_type[];
-int mmd_get_8ch_tempo(int);
-void mmd_xlat_fx(struct xxm_event *, int, int, int);
 
+#ifdef DEBUG
+extern const char *const mmd_inst_type[];
+#endif
 
 typedef int32 LONG;
 typedef uint32 ULONG;
@@ -31,10 +26,10 @@ typedef char *STRPTR;
  */
 
 struct PlaySeq {                                                            
-    char name[32];		/* (0)  31 chars + \0 */                        
-    ULONG reserved[2];		/* (32) for possible extensions */              
-    UWORD length;		/* (40) # of entries */                         
-    UWORD seq[1];		/* (42) block numbers.. */                      
+    char name[32];		/* (0)  31 chars + \0 */
+    ULONG reserved[2];		/* (32) for possible extensions */
+    UWORD length;		/* (40) # of entries */
+    UWORD seq[1];		/* (42) block numbers.. */
 };                                                      
 
 
@@ -312,3 +307,20 @@ struct MMDDump {
     UBYTE name[20];			/* name of the dump */
 };
 
+void mmd_xlat_fx(struct xmp_event *, int, int, int, int);
+int mmd_alloc_tables(struct module_data *, int, struct SynthInstr *);
+
+int mmd_load_hybrid_instrument(HIO_HANDLE *, struct module_data *, int, int,
+		struct SynthInstr *, struct InstrExt *, struct MMD0sample *);
+int mmd_load_synth_instrument(HIO_HANDLE *, struct module_data *, int, int,
+		struct SynthInstr *, struct InstrExt *, struct MMD0sample *);
+int mmd_load_sampled_instrument(HIO_HANDLE *, struct module_data *, int, int,
+		struct InstrHdr *, struct MMD0exp *, struct InstrExt *,
+		struct MMD0sample *, int);
+int mmd_load_iffoct_instrument(HIO_HANDLE *, struct module_data *, int, int,
+		struct InstrHdr *, int, struct InstrExt *, struct MMD0sample *);
+
+void mmd_set_bpm(struct module_data *, int, int, int, int);
+void mmd_info_text(HIO_HANDLE *, struct module_data *, int);
+
+#endif /* LIBXMP_MED_H */

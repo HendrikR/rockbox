@@ -1,11 +1,10 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
  * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
+ * under the terms of the GNU Lesser General Public License. See COPYING.LIB
  * for more information.
  */
-
 
 /*
  * Polly Tracker is a tracker for the Commodore 64 written by Aleksi Eeben.
@@ -13,18 +12,13 @@
  * information.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "libxmp/loaders/loader.h"
 
-#include "load.h"
+static int polly_test(HIO_HANDLE *, char *, const int);
+static int polly_load(struct module_data *, HIO_HANDLE *, const int);
 
-static int polly_test(FILE *, char *, const int);
-static int polly_load(struct xmp_context *, FILE *, const int);
-
-struct xmp_loader_info polly_loader = {
-	"POLLY",
-	"Polly Tracer",
+const struct format_loader polly_loader = {
+	"Polly Tracker",
 	polly_test,
 	polly_load
 };
@@ -35,24 +29,24 @@ struct xmp_loader_info polly_loader = {
 #define SMP_OFS (NUM_PAT * PAT_SIZE + 256)
 
 
-static void decode_rle(uint8 *out, FILE *f, int size)
+static void decode_rle(uint8 *out, HIO_HANDLE *f, int size)
 {
 	int i;
 
 	for (i = 0; i < size; ) {
-		int x = read8(f);
+		int x = hio_read8(f);
 
-		if (feof(f))
+		if (hio_eof(f))
 			return;
 
 		if (x == 0xae) {
 			int n,v;
-			switch (n = read8(f)) {
+			switch (n = hio_read8(f)) {
 			case 0x01:
 				out[i++] = 0xae;
 				break;
 			default:
-				v = read8(f);
+				v = hio_read8(f);
 				while (n-- && i < size)
 					out[i++] = v;
 			}
@@ -62,12 +56,12 @@ static void decode_rle(uint8 *out, FILE *f, int size)
 	}
 }
 
-static int polly_test(FILE *f, char *t, const int start)
+static int polly_test(HIO_HANDLE *f, char *t, const int start)
 {
 	int i;
 	uint8 *buf;
 
-	if (read8(f) != 0xae)
+	if (hio_read8(f) != 0xae)
 		return -1;
 
 	if ((buf = malloc(0x10000)) == NULL)
@@ -82,25 +76,33 @@ static int polly_test(FILE *f, char *t, const int start)
 		}
 	}
 
-	if (t)
+	if (t) {
 		memcpy(t, buf + ORD_OFS + 160, 16);
+		t[16] = 0;
+		for (i = 15; i >=0; i--) {
+			if (t[i] == ' ') {
+				t[i] = 0;
+			} else {
+				break;
+			}
+		}
+	}
 
 	free(buf);
 
 	return 0;
 }
 
-static int polly_load(struct xmp_context *ctx, FILE *f, const int start)
+static int polly_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
-	struct xxm_event *event;
+	struct xmp_module *mod = &m->mod;
+	struct xmp_event *event;
 	uint8 *buf;
 	int i, j, k;
 
 	LOAD_INIT();
 
-	read8(f);			/* skip 0xae */
+	hio_read8(f);			/* skip 0xae */
 	/*
 	 * File is RLE-encoded, escape is 0xAE (Aleksi Eeben's initials).
 	 * Actual 0xAE is encoded as 0xAE 0x01
@@ -111,16 +113,16 @@ static int polly_load(struct xmp_context *ctx, FILE *f, const int start)
 	decode_rle(buf, f, 0x10000);
 
 	for (i = 0; buf[ORD_OFS + i] != 0 && i < 128; i++)
-		m->xxo[i] = buf[ORD_OFS + i] - 0xe0;
-	m->xxh->len = i;
+		mod->xxo[i] = buf[ORD_OFS + i] - 0xe0;
+	mod->len = i;
 
-	memcpy(m->name, buf + ORD_OFS + 160, 16);
-	memcpy(m->author, buf + ORD_OFS + 176, 16);
+	memcpy(mod->name, buf + ORD_OFS + 160, 16);
+	/* memcpy(m->author, buf + ORD_OFS + 176, 16); */
 	set_type(m, "Polly Tracker");
 	MODULE_INFO();
 
-	m->xxh->tpo = 0x03;
-	m->xxh->bpm = 0x7d * buf[ORD_OFS + 193] / 0x88;
+	mod->spd = 0x03;
+	mod->bpm = 0x7d * buf[ORD_OFS + 193] / 0x88;
 #if 0
 	for (i = 0; i < 1024; i++) {
 		if ((i % 16) == 0) printf("\n");
@@ -128,24 +130,28 @@ static int polly_load(struct xmp_context *ctx, FILE *f, const int start)
 	}
 #endif
 
-	m->xxh->pat = 0;
-	for (i = 0; i < m->xxh->len; i++) {
-		if (m->xxo[i] > m->xxh->pat)
-			m->xxh->pat = m->xxo[i];
+	mod->pat = 0;
+	for (i = 0; i < mod->len; i++) {
+		if (mod->xxo[i] > mod->pat)
+			mod->pat = mod->xxo[i];
 	}
-	m->xxh->pat++;
+	mod->pat++;
 	
-	m->xxh->chn = 4;
-	m->xxh->trk = m->xxh->pat * m->xxh->chn;
+	mod->chn = 4;
+	mod->trk = mod->pat * mod->chn;
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0) {
+		free(buf);
+		return -1;
+	}
 
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	D_(D_INFO "Stored patterns: %d", mod->pat);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC(i);
-		m->xxp[i]->rows = 64;
-		TRACK_ALLOC(i);
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_tracks_alloc(mod, i, 64) < 0) {
+			free(buf);
+			return -1;
+		}
 
 		for (j = 0; j < 64; j++) {
 			for (k = 0; k < 4; k++) {
@@ -158,39 +164,38 @@ static int polly_load(struct xmp_context *ctx, FILE *f, const int start)
 				}
 				event->note = LSN(x);
 				if (event->note)
-					event->note += 36;
+					event->note += 48;
 				event->ins = MSN(x);
 			}
 		}
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
 
-
-	m->xxh->ins = m->xxh->smp = 15;
-	INSTRUMENT_INIT();
-
-	reportv(ctx, 1, "     Len  LBeg LEnd L Vol\n");
+	mod->ins = mod->smp = 15;
+	if (instrument_init(mod) < 0) {
+		free(buf);
+		return -1;
+	}
 
 	for (i = 0; i < 15; i++) {
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
-		m->xxs[i].len = buf[ORD_OFS + 129 + i] < 0x10 ? 0 :
-					256 * buf[ORD_OFS + 145 + i];
-		m->xxi[i][0].fin = 0;
-		m->xxi[i][0].vol = 0x40;
-		m->xxs[i].lps = 0;
-		m->xxs[i].lpe = 0;
-		m->xxs[i].flg = 0;
-		m->xxi[i][0].pan = 0x80;
-		m->xxi[i][0].sid = i;
-		m->xxih[i].nsm = !!(m->xxs[i].len);
-		m->xxih[i].rls = 0xfff;
-
-		if (V(1) && m->xxs[i].len > 0) {
-                	report("[%2X] %04x %04x %04x %c V%02x\n",
-                       		i, m->xxs[i].len, m->xxs[i].lps,
-                        	m->xxs[i].lpe, ' ', m->xxi[i][0].vol);
+		if (subinstrument_alloc(mod, i, 1) < 0) {
+			free(buf);
+			return -1;
 		}
+		mod->xxs[i].len = buf[ORD_OFS + 129 + i] < 0x10 ? 0 :
+					256 * buf[ORD_OFS + 145 + i];
+		mod->xxi[i].sub[0].fin = 0;
+		mod->xxi[i].sub[0].vol = 0x40;
+		mod->xxs[i].lps = 0;
+		mod->xxs[i].lpe = 0;
+		mod->xxs[i].flg = 0;
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxi[i].sub[0].sid = i;
+		mod->xxi[i].nsm = !!(mod->xxs[i].len);
+		mod->xxi[i].rls = 0xfff;
+
+                D_(D_INFO "[%2X] %04x %04x %04x %c V%02x",
+                       		i, mod->xxs[i].len, mod->xxs[i].lps,
+                        	mod->xxs[i].lpe, ' ', mod->xxi[i].sub[0].vol);
 	}
 
 	/* Convert samples from 6 to 8 bits */
@@ -198,27 +203,30 @@ static int polly_load(struct xmp_context *ctx, FILE *f, const int start)
 		buf[i] = buf[i] << 2;
 
 	/* Read samples */
-	reportv(ctx, 0, "Loading samples: %d ", m->xxh->ins);
+	D_(D_INFO "Loading samples: %d", mod->ins);
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		if (m->xxs[i].len == 0)
+	for (i = 0; i < mod->ins; i++) {
+		int ret;
+
+		if (mod->xxs[i].len == 0)
 			continue;
-		xmp_drv_loadpatch(ctx, NULL, m->xxi[i][0].sid, m->c4rate,
-				XMP_SMP_NOLOAD | XMP_SMP_UNS,
-				&m->xxs[m->xxi[i][0].sid],
-				(char*)buf + ORD_OFS + 256 +
+		ret = load_sample(m, NULL, SAMPLE_FLAG_NOLOAD | SAMPLE_FLAG_UNS,
+				&mod->xxs[i], (char*)buf + ORD_OFS + 256 +
 					256 * (buf[ORD_OFS + 129 + i] - 0x10));
-		reportv(ctx, 0, ".");
+
+		if (ret < 0) {
+			free(buf);
+			return -1;
+		}
 	}
-	reportv(ctx, 0, "\n");
 
 	free(buf);
 
 	/* make it mono */
-	for (i = 0; i < m->xxh->chn; i++)
-		m->xxc[i].pan = 0x80;
+	for (i = 0; i < mod->chn; i++)
+		mod->xxc[i].pan = 0x80;
 
-	m->xxh->flg |= XXM_FLG_MODRNG;
+	m->quirk |= QUIRK_MODRNG;
 
 	return 0;
 }

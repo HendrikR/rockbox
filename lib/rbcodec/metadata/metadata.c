@@ -136,7 +136,7 @@ const struct afmt_entry audio_formats[AFMT_NUM_CODECS] =
         AFMT_ENTRY("WMAPro","wmapro",NULL,      NULL,            "wma\0wmv\0asf\0"),
     /* Amiga MOD File */
     [AFMT_MOD] =
-        AFMT_ENTRY("MOD",   "mod",  NULL,       get_mod_metadata,   "mod\0"),
+        AFMT_ENTRY("MOD",   "mod",  NULL,       get_mod_metadata,   "\0"),
     /* Atari SAP File */
     [AFMT_SAP] =
         AFMT_ENTRY("SAP",   "asap", NULL,       get_asap_metadata,  "sap\0"),

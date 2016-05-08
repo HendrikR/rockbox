@@ -1,31 +1,21 @@
 /*
  * ac1d.c   Copyright (C) 1996-1997 Asle / ReDoX
- *	    Copyright (C) 2006-2007 Claudio Matsuoka
  *
- * Converts AC1D packed MODs back to PTK MODs
+ * Converts ac1d packed MODs back to PTK MODs
  * thanks to Gryzor and his ProWizard tool ! ... without it, this prog
  * would not exist !!!
+ *
+ * Modified in 2006,2007,2014 by Claudio Matsuoka
  */
 
 #include <stdlib.h>
 #include <string.h>
 #include "prowiz.h"
 
-static int depack_AC1D (FILE *, FILE *);
-static int test_AC1D (uint8 *, int);
+#define NO_NOTE 0xff
 
-struct pw_format pw_ac1d = {
-	"AC1D",
-	"AC1D Packer",
-	0x00,
-	test_AC1D,
-	depack_AC1D
-};
-
-
-static int depack_AC1D (FILE *in, FILE *out)
+static int depack_ac1d(HIO_HANDLE *in, FILE *out)
 {
-	uint8 NO_NOTE = 0xff;
 	uint8 c1, c2, c3, c4;
 	uint8 npos;
 	uint8 ntk_byte;
@@ -37,35 +27,39 @@ static int depack_AC1D (FILE *in, FILE *out)
 	int ssize = 0;
 	int paddr[128];
 	int psize[128];
-	int tsize1, tsize2, tsize3;
+	/*int tsize1, tsize2, tsize3;*/
 	int i, j, k;
 
 	memset(paddr, 0, 128 * 4);
 	memset(psize, 0, 128 * 4);
 
-	npos = read8(in);
-	ntk_byte = read8(in);
-	read16b(in);			/* bypass ID */
-	saddr = read32b(in);		/* sample data address */
+	npos = hio_read8(in);
+	ntk_byte = hio_read8(in);
+	hio_read16b(in);			/* bypass ID */
+	saddr = hio_read32b(in);		/* sample data address */
 
 	pw_write_zero(out, 20);		/* write title */
 
 	for (i = 0; i < 31; i++) {
 		pw_write_zero(out, 22);		/* name */
-		write16b(out, size = read16b(in));	/* size */
+		write16b(out, size = hio_read16b(in));	/* size */
 		ssize += size * 2;
-		write8(out, read8(in));		/* finetune */
-		write8(out, read8(in));		/* volume */
-		write16b(out, read16b(in));	/* loop start */
-		write16b(out, read16b(in));	/* loop size */
+		write8(out, hio_read8(in));		/* finetune */
+		write8(out, hio_read8(in));		/* volume */
+		write16b(out, hio_read16b(in));	/* loop start */
+		write16b(out, hio_read16b(in));	/* loop size */
 	}
 
 	/* pattern addresses */
 	for (npat = 0; npat < 128; npat++) {
-		paddr[npat] = read32b(in);
+		paddr[npat] = hio_read32b(in);
 		if (paddr[npat] == 0)
 			break;
 	}
+	if (npat == 0) {
+		return -1;
+	}
+
 	npat--;
 
 	for (i = 0; i < (npat - 1); i++)
@@ -74,32 +68,31 @@ static int depack_AC1D (FILE *in, FILE *out)
 	write8(out, npos);		/* write number of pattern pos */
 	write8(out, ntk_byte);		/* write "noisetracker" byte */
 
-	fseek(in, 0x300, SEEK_SET);	/* go to pattern table .. */
+	hio_seek(in, 0x300, SEEK_SET);	/* go to pattern table .. */
 	pw_move_data(out, in, 128);	/* pattern table */
 	
 	write32b(out, PW_MOD_MAGIC);	/* M.K. */
 
 	/* pattern data */
 	for (i = 0; i < npat; i++) {
-		fseek(in, paddr[i], SEEK_SET);
-		tsize1 = read32b(in);
-		tsize2 = read32b(in);
-		tsize3 = read32b(in);
+		hio_seek(in, paddr[i], SEEK_SET);
+		/*tsize1 =*/ hio_read32b(in);
+		/*tsize2 =*/ hio_read32b(in);
+		/*tsize3 =*/ hio_read32b(in);
 
 		memset(tmp, 0, 1024);
 		for (k = 0; k < 4; k++) {
 			for (j = 0; j < 64; j++) {
 				int x = j * 16 + k * 4;
 
-				note = ins = fxt = fxp = 0x00;
-				c1 = read8(in);
+				c1 = hio_read8(in);
 				if (c1 & 0x80) {
 					c4 = c1 & 0x7f;
 					j += (c4 - 1);
 					continue;
 				}
 
-				c2 = read8(in);
+				c2 = hio_read8(in);
 				ins = ((c1 & 0xc0) >> 2) | ((c2 >> 4) & 0x0f);
 				note = c1 & 0x3f;
 
@@ -119,13 +112,11 @@ static int depack_AC1D (FILE *in, FILE *out)
 				}
 
 				if ((c2 & 0x0f) == 0x07) {
-					fxt = 0x00;
-					fxp = 0x00;
 					tmp[x + 2] = (ins << 4) & 0xf0;
 					continue;
 				}
 
-				c3 = read8(in);
+				c3 = hio_read8(in);
 				fxt = c2 & 0x0f;
 				fxp = c3;
 				tmp[x + 2] = ((ins << 4) & 0xf0) | fxt;
@@ -136,17 +127,15 @@ static int depack_AC1D (FILE *in, FILE *out)
 	}
 
 	/* sample data */
-	fseek(in, saddr, 0);
+	hio_seek(in, saddr, 0);
 	pw_move_data(out, in, ssize);
 
 	return 0;
 }
 
-
-static int test_AC1D(uint8 *data, int s)
+static int test_ac1d(uint8 *data, char *t, int s)
 {
-	int j, k;
-	int start = 0;
+	int i;
 
 	PW_REQUEST_DATA(s, 896);
 
@@ -155,20 +144,29 @@ static int test_AC1D(uint8 *data, int s)
 		return -1;
 
 	/* test #2 */
-	if (data[start] > 0x7f)
+	if (data[0] > 0x7f)
 		return -1;
 
 	/* test #4 */
-	for (k = 0; k < 31; k++) {
-		if (data[start + 10 + 8 * k] > 0x0f)
+	for (i = 0; i < 31; i++) {
+		if (data[10 + 8 * i] > 0x0f)
 			return -1;
 	}
 
 	/* test #5 */
-	for (j = 0; j < 128; j++) {
-		if (data[start + 768 + j] > 0x7f)
+	for (i = 0; i < 128; i++) {
+		if (data[768 + i] > 0x7f)
 			return -1;
 	}
 
+	pw_read_title(NULL, t, 0);
+
 	return 0;
 }
+
+const struct pw_format pw_ac1d = {
+	"AC1D Packer",
+	test_ac1d,
+	depack_ac1d
+};
+

@@ -1,11 +1,28 @@
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+/* Extended Module Player
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include <stdio.h>
 
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 #include "asif.h"
 
 #define MAGIC_FORM	MAGIC4('F','O','R','M')
@@ -14,10 +31,9 @@
 #define MAGIC_INST	MAGIC4('I','N','S','T')
 #define MAGIC_WAVE	MAGIC4('W','A','V','E')
 
-int asif_load(struct xmp_context *ctx, FILE *f, int i)
+int asif_load(struct module_data *m, HIO_HANDLE *f, int i)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
 	int size, pos;
 	uint32 id;
 	int chunk;
@@ -26,38 +42,37 @@ int asif_load(struct xmp_context *ctx, FILE *f, int i)
 	if (f == NULL)
 		return -1;
 
-	if (read32b(f) != MAGIC_FORM)
+	if (hio_read32b(f) != MAGIC_FORM)
 		return -1;
-	size = read32b(f);
+	/*size =*/ hio_read32b(f);
 
-	if (read32b(f) != MAGIC_ASIF)
+	if (hio_read32b(f) != MAGIC_ASIF)
 		return -1;
 
 	for (chunk = 0; chunk < 2; ) {
-		id = read32b(f);
-		size = read32b(f);
-		pos = ftell(f) + size;
+		id = hio_read32b(f);
+		size = hio_read32b(f);
+		pos = hio_tell(f) + size;
 
 		switch (id) {
 		case MAGIC_WAVE:
 			//printf("wave chunk\n");
 		
-			fseek(f, read8(f), SEEK_CUR);	/* skip name */
-			m->xxs[i].len = read16l(f) + 1;
-			size = read16l(f);		/* NumSamples */
+			hio_seek(f, hio_read8(f), SEEK_CUR);	/* skip name */
+			mod->xxs[i].len = hio_read16l(f) + 1;
+			size = hio_read16l(f);		/* NumSamples */
 			
-			//printf("WaveSize = %d\n", xxs[i].len);
-			//printf("NumSamples = %d\n", size);
-
 			for (j = 0; j < size; j++) {
-				read16l(f);		/* Location */
-				m->xxs[j].len = 256 * read16l(f);
-				read16l(f);		/* OrigFreq */
-				read16l(f);		/* SampRate */
+				hio_read16l(f);		/* Location */
+				mod->xxs[j].len = 256 * hio_read16l(f);
+				hio_read16l(f);		/* OrigFreq */
+				hio_read16l(f);		/* SampRate */
 			}
 		
-			xmp_drv_loadpatch(ctx, f, i, m->c4rate,
-					XMP_SMP_UNS, &m->xxs[i], NULL);
+			if (load_sample(m, f, SAMPLE_FLAG_UNS,
+						&mod->xxs[i], NULL) < 0) {
+				return -1;
+			}
 
 			chunk++;
 			break;
@@ -65,26 +80,26 @@ int asif_load(struct xmp_context *ctx, FILE *f, int i)
 		case MAGIC_INST:
 			//printf("inst chunk\n");
 		
-			fseek(f, read8(f), SEEK_CUR);	/* skip name */
+			hio_seek(f, hio_read8(f), SEEK_CUR);	/* skip name */
 		
-			read16l(f);			/* SampNum */
-			fseek(f, 24, SEEK_CUR);		/* skip envelope */
-			read8(f);			/* ReleaseSegment */
-			read8(f);			/* PriorityIncrement */
-			read8(f);			/* PitchBendRange */
-			read8(f);			/* VibratoDepth */
-			read8(f);			/* VibratoSpeed */
-			read8(f);			/* UpdateRate */
+			hio_read16l(f);			/* SampNum */
+			hio_seek(f, 24, SEEK_CUR);	/* skip envelope */
+			hio_read8(f);			/* ReleaseSegment */
+			hio_read8(f);			/* PriorityIncrement */
+			hio_read8(f);			/* PitchBendRange */
+			hio_read8(f);			/* VibratoDepth */
+			hio_read8(f);			/* VibratoSpeed */
+			hio_read8(f);			/* UpdateRate */
 		
-			m->xxih[i].nsm = 1;
-			m->xxi[i][0].vol = 0x40;
-			m->xxi[i][0].pan = 0x80;
-			m->xxi[i][0].sid = i;
+			mod->xxi[i].nsm = 1;
+			mod->xxi[i].sub[0].vol = 0x40;
+			mod->xxi[i].sub[0].pan = 0x80;
+			mod->xxi[i].sub[0].sid = i;
 
 			chunk++;
 		}
 
-		fseek(f, pos, SEEK_SET);
+		hio_seek(f, pos, SEEK_SET);
 	}
 
 	return 0;

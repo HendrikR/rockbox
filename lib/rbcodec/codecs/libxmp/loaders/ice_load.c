@@ -1,176 +1,203 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /* Loader for Soundtracker 2.6/Ice Tracker modules */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 
 #define MAGIC_MTN_	MAGIC4('M','T','N',0)
 #define MAGIC_IT10	MAGIC4('I','T','1','0')
 
+static int ice_test(HIO_HANDLE *, char *, const int);
+static int ice_load(struct module_data *, HIO_HANDLE *, const int);
 
-static int ice_test (FILE *, char *, const int);
-static int ice_load (struct xmp_context *, FILE *, const int);
-
-struct xmp_loader_info ice_loader = {
-    "MTN",
-    "Soundtracker 2.6/Ice Tracker",
-    ice_test,
-    ice_load
+const struct format_loader ice_loader = {
+	"Soundtracker 2.6/Ice Tracker",
+	ice_test,
+	ice_load
 };
 
-static int ice_test(FILE *f, char *t, const int start)
+static int ice_test(HIO_HANDLE * f, char *t, const int start)
 {
-    uint32 magic;
+	uint32 magic;
 
-    fseek(f, start + 1464, SEEK_SET);
-    magic = read32b(f);
-    if (magic != MAGIC_MTN_ && magic != MAGIC_IT10)
-	return -1;
+	hio_seek(f, start + 1464, SEEK_SET);
+	magic = hio_read32b(f);
+	if (magic != MAGIC_MTN_ && magic != MAGIC_IT10)
+		return -1;
 
-    fseek(f, start + 0, SEEK_SET);
-    read_title(f, t, 28);
+	hio_seek(f, start + 0, SEEK_SET);
+	read_title(f, t, 28);
 
-    return 0;
+	return 0;
 }
 
-
 struct ice_ins {
-    char name[22];		/* Instrument name */
-    uint16 len;			/* Sample length / 2 */
-    uint8 finetune;		/* Finetune */
-    uint8 volume;		/* Volume (0-63) */
-    uint16 loop_start;		/* Sample loop start in file */
-    uint16 loop_size;		/* Loop size / 2 */
+	char name[22];		/* Instrument name */
+	uint16 len;		/* Sample length / 2 */
+	uint8 finetune;		/* Finetune */
+	uint8 volume;		/* Volume (0-63) */
+	uint16 loop_start;	/* Sample loop start in file */
+	uint16 loop_size;	/* Loop size / 2 */
 };
 
 struct ice_header {
-    char title[20];
-    struct ice_ins ins[31];	/* Instruments */
-    uint8 len;			/* Size of the pattern list */
-    uint8 trk;			/* Number of tracks */
-    uint8 ord[128][4];
-    uint32 magic;		/* 'MTN\0', 'IT10' */
+	char title[20];
+	struct ice_ins ins[31];	/* Instruments */
+	uint8 len;		/* Size of the pattern list */
+	uint8 trk;		/* Number of tracks */
+	uint8 ord[128][4];
+	uint32 magic;		/* 'MTN\0', 'IT10' */
 };
 
-
-static int ice_load(struct xmp_context *ctx, FILE *f, const int start)
+static int ice_load(struct module_data *m, HIO_HANDLE * f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
-    int i, j;
-    struct xxm_event *event;
-    struct ice_header ih;
-    uint8 ev[4];
+	struct xmp_module *mod = &m->mod;
+	int i, j;
+	struct xmp_event *event;
+	struct ice_header ih;
+	uint8 ev[4];
 
-    LOAD_INIT();
+	LOAD_INIT();
 
-    fread(&ih.title, 20, 1, f);
-    for (i = 0; i < 31; i++) {
-	fread(&ih.ins[i].name, 22, 1, f);
-	ih.ins[i].len = read16b(f);
-	ih.ins[i].finetune = read8(f);
-	ih.ins[i].volume = read8(f);
-	ih.ins[i].loop_start = read16b(f);
-	ih.ins[i].loop_size = read16b(f);
-    }
-    ih.len = read8(f);
-    ih.trk = read8(f);
-    fread(&ih.ord, 128 * 4, 1, f);
-    ih.magic = read32b(f);
-
-    if (ih.magic == MAGIC_IT10)
-        strcpy(m->type, "IT10 (Ice Tracker)");
-    else if (ih.magic == MAGIC_MTN_)
-        strcpy(m->type, "MTN (Soundtracker 2.6)");
-    else
-	return -1;
-
-    m->xxh->ins = 31;
-    m->xxh->smp = m->xxh->ins;
-    m->xxh->pat = ih.len;
-    m->xxh->len = ih.len;
-    m->xxh->trk = ih.trk;
-
-    strncpy (m->name, (char *) ih.title, 20);
-    MODULE_INFO();
-
-    INSTRUMENT_INIT();
-
-    reportv(ctx, 1, "     Instrument name        Len  LBeg LEnd L Vl Ft\n");
-
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
-	m->xxih[i].nsm = !!(m->xxs[i].len = 2 * ih.ins[i].len);
-	m->xxs[i].lps = 2 * ih.ins[i].loop_start;
-	m->xxs[i].lpe = m->xxs[i].lps + 2 * ih.ins[i].loop_size;
-	m->xxs[i].flg = ih.ins[i].loop_size > 1 ? WAVE_LOOPING : 0;
-	m->xxi[i][0].vol = ih.ins[i].volume;
-	m->xxi[i][0].fin = ((int16)ih.ins[i].finetune / 0x48) << 4;
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].sid = i;
-	if (V(1) && m->xxs[i].len > 2)
-	    report ("[%2X] %-22.22s %04x %04x %04x %c %02x %+01x\n",
-		i, ih.ins[i].name, m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe,
-		m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ', m->xxi[i][0].vol,
-		m->xxi[i][0].fin >> 4);
-    }
-
-    PATTERN_INIT();
-
-    if (V(0))
-	report ("Stored patterns: %d ", m->xxh->pat);
-
-    for (i = 0; i < m->xxh->pat; i++) {
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	for (j = 0; j < m->xxh->chn; j++) {
-	    m->xxp[i]->info[j].index =  ih.ord[i][j];
+	hio_read(&ih.title, 20, 1, f);
+	for (i = 0; i < 31; i++) {
+		hio_read(&ih.ins[i].name, 22, 1, f);
+		ih.ins[i].len = hio_read16b(f);
+		ih.ins[i].finetune = hio_read8(f);
+		ih.ins[i].volume = hio_read8(f);
+		ih.ins[i].loop_start = hio_read16b(f);
+		ih.ins[i].loop_size = hio_read16b(f);
 	}
-	m->xxo[i] = i;
+	ih.len = hio_read8(f);
+	ih.trk = hio_read8(f);
+	hio_read(&ih.ord, 128 * 4, 1, f);
+	ih.magic = hio_read32b(f);
 
-	reportv(ctx, 0, ".");
-    }
-
-    reportv(ctx, 0, "\nStored tracks  : %d ", m->xxh->trk);
-
-    for (i = 0; i < m->xxh->trk; i++) {
-	m->xxt[i] = calloc (sizeof (struct xxm_track) + sizeof
-		(struct xxm_event) * 64, 1);
-	m->xxt[i]->rows = 64;
-	for (j = 0; j < m->xxt[i]->rows; j++) {
-		event = &m->xxt[i]->event[j];
-		fread (ev, 1, 4, f);
-		cvt_pt_event (event, ev);
+	/* Sanity check */
+	if (ih.len > 128) {
+		return -1;
+	}
+	for (i = 0; i < ih.len; i++) {
+		for (j = 0; j < 4; j++) {
+			if (ih.ord[i][j] >= ih.trk)
+				return -1;
+		}
 	}
 
-	if (V(0) && !(i % m->xxh->chn))
-	    report (".");
-    }
+	if (ih.magic == MAGIC_IT10)
+		set_type(m, "Ice Tracker");
+	else if (ih.magic == MAGIC_MTN_)
+		set_type(m, "Soundtracker 2.6");
+	else
+		return -1;
 
-    m->xxh->flg |= XXM_FLG_MODRNG;
+	mod->ins = 31;
+	mod->smp = mod->ins;
+	mod->pat = ih.len;
+	mod->len = ih.len;
+	mod->trk = ih.trk;
 
-    /* Read samples */
+	strncpy(mod->name, (char *)ih.title, 20);
+	MODULE_INFO();
 
-    reportv(ctx, 0, "\nStored samples : %d ", m->xxh->smp);
+	if (instrument_init(mod) < 0)
+		return -1;
 
-    for (i = 0; i < m->xxh->ins; i++) {
-	if (m->xxs[i].len <= 4)
-	    continue;
-	xmp_drv_loadpatch(ctx, f, i, m->c4rate, 0, &m->xxs[i], NULL);
-	reportv(ctx, 0, ".");
-    }
-    reportv(ctx, 0, "\n");
+	for (i = 0; i < mod->ins; i++) {
+		struct xmp_instrument *xxi;
+		struct xmp_sample *xxs;
 
-    return 0;
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
+
+		xxi = &mod->xxi[i];
+		xxs = &mod->xxs[i];
+
+		xxs->len = 2 * ih.ins[i].len;
+		xxs->lps = 2 * ih.ins[i].loop_start;
+		xxs->lpe = xxs->lps + 2 * ih.ins[i].loop_size;
+		xxs->flg = ih.ins[i].loop_size > 1 ? XMP_SAMPLE_LOOP : 0;
+		xxi->sub[0].vol = ih.ins[i].volume;
+		/* xxi->sub[0].fin = (int8)(ih.ins[i].finetune << 4); */
+		xxi->sub[0].pan = 0x80;
+		xxi->sub[0].sid = i;
+
+		if (xxs->len > 0)
+			xxi->nsm = 1;
+
+		D_(D_INFO "[%2X] %-22.22s %04x %04x %04x %c %02x %01x",
+		   i, ih.ins[i].name, xxs->len, xxs->lps,
+		   xxs->lpe, xxs->flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+		   xxi->sub[0].vol, xxi->sub[0].fin >> 4);
+	}
+
+	if (pattern_init(mod) < 0)
+		return -1;
+
+	D_(D_INFO "Stored patterns: %d", mod->pat);
+
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_alloc(mod, i) < 0)
+			return -1;
+		mod->xxp[i]->rows = 64;
+
+		for (j = 0; j < mod->chn; j++) {
+			mod->xxp[i]->index[j] = ih.ord[i][j];
+		}
+		mod->xxo[i] = i;
+	}
+
+	D_(D_INFO "Stored tracks: %d", mod->trk);
+
+	for (i = 0; i < mod->trk; i++) {
+		if (track_alloc(mod, i, 64) < 0)
+			return -1;
+
+		for (j = 0; j < mod->xxt[i]->rows; j++) {
+			event = &mod->xxt[i]->event[j];
+			hio_read(ev, 1, 4, f);
+			decode_protracker_event(event, ev);
+
+			if (event->fxt == FX_SPEED) {
+				if (MSN(event->fxp) && LSN(event->fxp)) {
+					event->fxt = FX_ICE_SPEED;
+				}
+			}
+		}
+	}
+
+	m->quirk |= QUIRK_MODRNG;
+
+	/* Read samples */
+
+	D_(D_INFO "Stored samples: %d", mod->smp);
+
+	for (i = 0; i < mod->ins; i++) {
+		if (mod->xxs[i].len <= 4)
+			continue;
+		if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+			return -1;
+	}
+
+	return 0;
 }
-

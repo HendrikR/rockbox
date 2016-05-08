@@ -1,183 +1,264 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "libxmp/loaders/loader.h"
 
-#include "load.h"
-#include "mtm.h"
-
-static int mtm_test (FILE *, char *, const int);
-static int mtm_load (struct xmp_context *, FILE *, const int);
-
-struct xmp_loader_info mtm_loader = {
-    "MTM",
-    "Multitracker",
-    mtm_test,
-    mtm_load
+struct mtm_file_header {
+	uint8 magic[3];		/* "MTM" */
+	uint8 version;		/* MSN=major, LSN=minor */
+	uint8 name[20];		/* ASCIIZ Module name */
+	uint16 tracks;		/* Number of tracks saved */
+	uint8 patterns;		/* Number of patterns saved */
+	uint8 modlen;		/* Module length */
+	uint16 extralen;	/* Length of the comment field */
+	uint8 samples;		/* Number of samples */
+	uint8 attr;		/* Always zero */
+	uint8 rows;		/* Number rows per track */
+	uint8 channels;		/* Number of tracks per pattern */
+	uint8 pan[32];		/* Pan positions for each channel */
 };
 
-static int mtm_test(FILE *f, char *t, const int start)
+struct mtm_instrument_header {
+	uint8 name[22];		/* Instrument name */
+	uint32 length;		/* Instrument length in bytes */
+	uint32 loop_start;	/* Sample loop start */
+	uint32 loopend;		/* Sample loop end */
+	uint8 finetune;		/* Finetune */
+	uint8 volume;		/* Playback volume */
+	uint8 attr;		/* &0x01: 16bit sample */
+};
+
+static int mtm_test(HIO_HANDLE *, char *, const int);
+static int mtm_load(struct module_data *, HIO_HANDLE *, const int);
+
+const struct format_loader mtm_loader = {
+	"Multitracker",
+	mtm_test,
+	mtm_load
+};
+
+static int mtm_test(HIO_HANDLE *f, char *t, const int start)
 {
-    uint8 buf[4];
+	uint8 buf[4];
 
-    if (fread(buf, 1, 4, f) < 4)
-	return -1;
-    if (memcmp(buf, "MTM", 3))
-	return -1;
-    if (buf[3] != 0x10)
-	return -1;
+	if (hio_read(buf, 1, 4, f) < 4)
+		return -1;
+	if (memcmp(buf, "MTM", 3))
+		return -1;
+	if (buf[3] != 0x10)
+		return -1;
 
-    read_title(f, t, 20);
+	read_title(f, t, 20);
 
-    return 0;
+	return 0;
 }
 
-
-static int mtm_load(struct xmp_context *ctx, FILE *f, const int start)
+static int mtm_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
-    int i, j;
-    struct mtm_file_header mfh;
-    struct mtm_instrument_header mih;
-    uint8 mt[192];
-    uint16 mp[32];
+	struct xmp_module *mod = &m->mod;
+	int i, j;
+	struct mtm_file_header mfh;
+	struct mtm_instrument_header mih;
+	uint8 mt[192];
 
-    LOAD_INIT();
+	LOAD_INIT();
 
-    fread(&mfh.magic, 3, 1, f);		/* "MTM" */
-    mfh.version = read8(f);		/* MSN=major, LSN=minor */
-    fread(&mfh.name, 20, 1, f);		/* ASCIIZ Module name */
-    mfh.tracks = read16l(f);		/* Number of tracks saved */
-    mfh.patterns = read8(f);		/* Number of patterns saved */
-    mfh.modlen = read8(f);		/* Module length */
-    mfh.extralen = read16l(f);		/* Length of the comment field */
-    mfh.samples = read8(f);		/* Number of samples */
-    mfh.attr = read8(f);		/* Always zero */
-    mfh.rows = read8(f);		/* Number rows per track */
-    mfh.channels = read8(f);		/* Number of tracks per pattern */
-    fread(&mfh.pan, 32, 1, f);		/* Pan positions for each channel */
+	hio_read(&mfh.magic, 3, 1, f);	/* "MTM" */
+	mfh.version = hio_read8(f);	/* MSN=major, LSN=minor */
+	hio_read(&mfh.name, 20, 1, f);	/* ASCIIZ Module name */
+	mfh.tracks = hio_read16l(f);	/* Number of tracks saved */
+	mfh.patterns = hio_read8(f);	/* Number of patterns saved */
+	mfh.modlen = hio_read8(f);	/* Module length */
+	mfh.extralen = hio_read16l(f);	/* Length of the comment field */
+
+	mfh.samples = hio_read8(f);	/* Number of samples */
+	if (mfh.samples > 63) {
+		return -1;
+	}
+
+	mfh.attr = hio_read8(f);	/* Always zero */
+
+	mfh.rows = hio_read8(f);	/* Number rows per track */
+	if (mfh.rows != 64)
+		return -1;
+
+	mfh.channels = hio_read8(f);	/* Number of tracks per pattern */
+	if (mfh.channels > XMP_MAX_CHANNELS) {
+		return -1;
+	}
+
+	hio_read(&mfh.pan, 32, 1, f);	/* Pan positions for each channel */
+
+	if (hio_error(f)) {
+		return -1;
+	}
 
 #if 0
-    if (strncmp ((char *)mfh.magic, "MTM", 3))
-	return -1;
+	if (strncmp((char *)mfh.magic, "MTM", 3))
+		return -1;
 #endif
 
-    m->xxh->trk = mfh.tracks + 1;
-    m->xxh->pat = mfh.patterns + 1;
-    m->xxh->len = mfh.modlen + 1;
-    m->xxh->ins = mfh.samples;
-    m->xxh->smp = m->xxh->ins;
-    m->xxh->chn = mfh.channels;
-    m->xxh->tpo = 6;
-    m->xxh->bpm = 125;
+	mod->trk = mfh.tracks + 1;
+	mod->pat = mfh.patterns + 1;
+	mod->len = mfh.modlen + 1;
+	mod->ins = mfh.samples;
+	mod->smp = mod->ins;
+	mod->chn = mfh.channels;
+	mod->spd = 6;
+	mod->bpm = 125;
 
-    strncpy(m->name, (char *)mfh.name, 20);
-    set_type(m, "MTM (MultiTracker %d.%02d)",
-				MSN(mfh.version), LSN(mfh.version));
+	strncpy(mod->name, (char *)mfh.name, 20);
+	set_type(m, "MultiTracker %d.%02d MTM", MSN(mfh.version),
+		 LSN(mfh.version));
 
-    MODULE_INFO();
+	MODULE_INFO();
 
-    INSTRUMENT_INIT();
+	if (instrument_init(mod) < 0)
+		return -1;
 
-    /* Read and convert instruments */
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
+	/* Read and convert instruments */
+	for (i = 0; i < mod->ins; i++) {
+		struct xmp_instrument *xxi = &mod->xxi[i];
+		struct xmp_sample *xxs = &mod->xxs[i];
+		struct xmp_subinstrument *sub;
 
-	fread(&mih.name, 22, 1, f);		/* Instrument name */
-	mih.length = read32l(f);		/* Instrument length in bytes */
-	mih.loop_start = read32l(f);		/* Sample loop start */
-	mih.loopend = read32l(f);		/* Sample loop end */
-	mih.finetune = read8(f);		/* Finetune */
-	mih.volume = read8(f);			/* Playback volume */
-	mih.attr = read8(f);			/* &0x01: 16bit sample */
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
 
-	m->xxih[i].nsm = !!(m->xxs[i].len = mih.length);
-	m->xxs[i].lps = mih.loop_start;
-	m->xxs[i].lpe = mih.loopend;
-	m->xxs[i].flg = m->xxs[i].lpe ? WAVE_LOOPING : 0;	/* 1 == Forward loop */
-	m->xxs[i].flg |= mfh.attr & 1 ? WAVE_16_BITS : 0;
-	m->xxi[i][0].vol = mih.volume;
-	m->xxi[i][0].fin = 0x80 + (int8)(mih.finetune << 4);
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].sid = i;
+		sub = &xxi->sub[0];
 
-	copy_adjust(m->xxih[i].name, mih.name, 22);
+		hio_read(&mih.name, 22, 1, f);	/* Instrument name */
+		mih.length = hio_read32l(f);	/* Instrument length in bytes */
 
-	if ((V(1)) && (strlen((char *) m->xxih[i].name) || m->xxs[i].len))
-	    report ("[%2X] %-22.22s %04x%c%04x %04x %c V%02x F%+03d\n", i,
-		m->xxih[i].name, m->xxs[i].len, m->xxs[i].flg & WAVE_16_BITS ? '+' : ' ',
-		m->xxs[i].lps, m->xxs[i].lpe, m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-		m->xxi[i][0].vol, m->xxi[i][0].fin - 0x80);
-    }
+		if (mih.length > MAX_SAMPLE_SIZE)
+			return -1;
 
-    fread(m->xxo, 1, 128, f);
+		mih.loop_start = hio_read32l(f); /* Sample loop start */
+		mih.loopend = hio_read32l(f);	/* Sample loop end */
+		mih.finetune = hio_read8(f);	/* Finetune */
+		mih.volume = hio_read8(f);	/* Playback volume */
+		mih.attr = hio_read8(f);	/* &0x01: 16bit sample */
 
-    PATTERN_INIT();
+		xxs->len = mih.length;
+		xxs->lps = mih.loop_start;
+		xxs->lpe = mih.loopend;
+		xxs->flg = xxs->lpe ? XMP_SAMPLE_LOOP : 0;	/* 1 == Forward loop */
+		if (mfh.attr & 1) {
+			xxs->flg |= XMP_SAMPLE_16BIT;
+			xxs->len >>= 1;
+			xxs->lps >>= 1;
+			xxs->lpe >>= 1;
+		}
 
-    reportv(ctx, 0, "Stored tracks  : %d ", m->xxh->trk - 1);
+		sub->vol = mih.volume;
+		sub->fin = mih.finetune;
+		sub->pan = 0x80;
+		sub->sid = i;
 
-    for (i = 0; i < m->xxh->trk; i++) {
-	m->xxt[i] = calloc (sizeof (struct xxm_track) +
-	    sizeof (struct xxm_event) * mfh.rows, 1);
-	m->xxt[i]->rows = mfh.rows;
-	if (!i)
-	    continue;
-	fread (&mt, 3, 64, f);
-	for (j = 0; j < 64; j++) {
-	    if ((m->xxt[i]->event[j].note = mt[j * 3] >> 2))
-		m->xxt[i]->event[j].note += 25;
-	    m->xxt[i]->event[j].ins = ((mt[j * 3] & 0x3) << 4) + MSN (mt[j * 3 + 1]);
-	    m->xxt[i]->event[j].fxt = LSN (mt[j * 3 + 1]);
-	    m->xxt[i]->event[j].fxp = mt[j * 3 + 2];
-	    if (m->xxt[i]->event[j].fxt > FX_TEMPO)
-		m->xxt[i]->event[j].fxt = m->xxt[i]->event[j].fxp = 0;
-	    /* Set pan effect translation */
-	    if ((m->xxt[i]->event[j].fxt == FX_EXTENDED) &&
-		(MSN (m->xxt[i]->event[j].fxp) == 0x8)) {
-		m->xxt[i]->event[j].fxt = FX_SETPAN;
-		m->xxt[i]->event[j].fxp <<= 4;
-	    }
+		instrument_name(mod, i, mih.name, 22);
+
+		if (xxs->len > 0)
+			mod->xxi[i].nsm = 1;
+
+		D_(D_INFO "[%2X] %-22.22s %04x%c%04x %04x %c V%02x F%+03d\n", i,
+		   xxi->name, xxs->len, xxs->flg & XMP_SAMPLE_16BIT ? '+' : ' ',
+		   xxs->lps, xxs->lpe, xxs->flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+		   sub->vol, sub->fin - 0x80);
 	}
-	if (V(0) && !(i % m->xxh->chn))
-	    report (".");
-    }
-    reportv(ctx, 0, "\n");
 
-    /* Read patterns */
-    reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat - 1);
+	hio_read(mod->xxo, 1, 128, f);
 
-    for (i = 0; i < m->xxh->pat; i++) {
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	for (j = 0; j < 32; j++)
-	    mp[j] = read16l(f);
-	for (j = 0; j < m->xxh->chn; j++)
-	    m->xxp[i]->info[j].index = mp[j];
-	reportv(ctx, 0, ".");
-    }
+	if (pattern_init(mod) < 0)
+		return -1;
 
-    /* Comments */
-    fseek(f, mfh.extralen, SEEK_CUR);
+	D_(D_INFO "Stored tracks: %d", mod->trk - 1);
 
-    /* Read samples */
-    reportv(ctx, 0, "\nStored samples : %d ", m->xxh->smp);
-    for (i = 0; i < m->xxh->ins; i++) {
-	xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate,
-	    XMP_SMP_UNS, &m->xxs[m->xxi[i][0].sid], NULL);
-	reportv(ctx, 0, ".");
-    }
-    reportv(ctx, 0, "\n");
+	for (i = 0; i < mod->trk; i++) {
 
-    for (i = 0; i < m->xxh->chn; i++)
-	m->xxc[i].pan = mfh.pan[i] << 4;
+		if (track_alloc(mod, i, mfh.rows) < 0)
+			return -1;
 
-    return 0;
+		if (i == 0)
+			continue;
+
+		if (hio_read(&mt, 3, 64, f) != 64)
+			return -1;
+
+		for (j = 0; j < 64; j++) {
+			struct xmp_event *e = &mod->xxt[i]->event[j];
+			uint8 *d = mt + j * 3;
+
+			if ((e->note = d[0] >> 2)) {
+				e->note += 37;
+			}
+			e->ins = ((d[0] & 0x3) << 4) + MSN(d[1]);
+			e->fxt = LSN(d[1]);
+			e->fxp = d[2];
+			if (e->fxt > FX_SPEED) {
+				e->fxt = e->fxp = 0;
+			}
+
+			/* Set pan effect translation */
+			if (e->fxt == FX_EXTENDED && MSN(e->fxp) == 0x8) {
+				e->fxt = FX_SETPAN;
+				e->fxp <<= 4;
+			}
+		}
+	}
+
+	/* Read patterns */
+	D_(D_INFO "Stored patterns: %d", mod->pat - 1);
+
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_alloc(mod, i) < 0)
+			return -1;
+
+		mod->xxp[i]->rows = 64;
+		for (j = 0; j < 32; j++) {
+			int track = hio_read16l(f);
+
+			if (track >= mod->trk) {
+				track = 0;
+			}
+
+			if (j < mod->chn) {
+				mod->xxp[i]->index[j] = track;
+			}
+		}
+	}
+
+	/* Comments */
+	hio_seek(f, mfh.extralen, SEEK_CUR);
+
+	/* Read samples */
+	D_(D_INFO "Stored samples: %d", mod->smp);
+
+	for (i = 0; i < mod->ins; i++) {
+		if (load_sample(m, f, SAMPLE_FLAG_UNS, &mod->xxs[i], NULL) < 0)
+			return -1;
+	}
+
+	for (i = 0; i < mod->chn; i++)
+		mod->xxc[i].pan = mfh.pan[i] << 4;
+
+	return 0;
 }

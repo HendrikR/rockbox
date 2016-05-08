@@ -1,17 +1,26 @@
-/* Extended Module Player UMX module loader
- * Copyright (C) 2007 Claudio Matsuoka
+/* Extended Module Player
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
-#include "../lib/rbcodec/codecs/libxmp/include/list.h"
+#include "libxmp/loaders/loader.h"
 
 #define TEST_SIZE 1500
 
@@ -20,25 +29,27 @@
 #define MAGIC_SCRM	MAGIC4('S','C','R','M')
 #define MAGIC_M_K_	MAGIC4('M','.','K','.')
 
-extern struct list_head loader_list;
+extern const struct format_loader xm_loader;
+extern const struct format_loader it_loader;
+extern const struct format_loader s3m_loader;
+extern const struct format_loader mod_loader;
 
-static int umx_test (FILE *, char *, const int);
-static int umx_load (struct xmp_context *, FILE *, const int);
+static int umx_test (HIO_HANDLE *, char *, const int);
+static int umx_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info umx_loader = {
-	"UMX",
-	"Epic Games Unreal/UT",
+const struct format_loader umx_loader = {
+	"Epic Games UMX",
 	umx_test,
 	umx_load
 };
 
-static int umx_test(FILE *f, char *t, const int start)
+static int umx_test(HIO_HANDLE *f, char *t, const int start)
 {
 	int i, offset = -1;
 	uint8 buf[TEST_SIZE], *b = buf;
 	uint32 id;
 
-	if (fread(buf, 1, TEST_SIZE, f) < TEST_SIZE)
+	if (hio_read(buf, 1, TEST_SIZE, f) < TEST_SIZE)
 		return -1;
 ;
 	id = readmem32b(b);
@@ -73,49 +84,50 @@ static int umx_test(FILE *f, char *t, const int start)
 	return 0;
 }
 
-
-static int load(struct xmp_context *ctx, FILE *f, char *fmt, int offset)
+static int umx_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_loader_info *li;
-	struct list_head *head;
-
-	list_for_each(head, &loader_list) {
-		li = list_entry(head, struct xmp_loader_info, list);
-		if (strcmp(li->id, fmt) == 0) {
-			if (li->loader(ctx, f, offset) == 0)
-				return 0;
-		}
-	}
-
-	return -1;
-}
-
-
-static int umx_load(struct xmp_context *ctx, FILE *f, const int start)
-{
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
 	int i;
 	uint8 buf[TEST_SIZE], *b = buf;
 	uint32 id;
 
 	LOAD_INIT();
 
-	reportv(ctx, 0, "Container type : Epic Games UMX\n");
+	D_(D_INFO "Container type : Epic Games UMX");
 
-	fread(buf, 1, TEST_SIZE, f);
+	hio_read(buf, 1, TEST_SIZE, f);
 
 	for (i = 0; i < TEST_SIZE; i++, b++) {
 		id = readmem32b(b);
 
-		if (!memcmp(b, "Extended Module:", 16))
-			return load(ctx, f, "XM", i);
-		if (id == MAGIC_IMPM)
-			return load(ctx, f, "IT", i);
-		if (i > 44 && id == MAGIC_SCRM)
-			return load(ctx, f, "S3M", i - 44);
-		if (i > 1080 && id == MAGIC_M_K_)
-			return load(ctx, f, "MOD", i - 1080);
+		if (!memcmp(b, "Extended Module:", 16)) {
+			if (hio_seek(f, i, SEEK_SET) < 0) {
+				return -1;
+			}
+			return xm_loader.loader(m, f, i);
+		}
+
+		if (id == MAGIC_IMPM) {
+			if (hio_seek(f, i, SEEK_SET) < 0) {
+				return -1;
+			}
+			return it_loader.loader(m, f, i);
+		}
+
+		if (i > 44 && id == MAGIC_SCRM) {
+			i -= 44;
+			if (hio_seek(f, i, SEEK_SET) < 0) {
+				return -1;
+			}
+			return s3m_loader.loader(m, f, i);
+		}
+
+		if (i > 1080 && id == MAGIC_M_K_) {
+			i -= 1080;
+			if (hio_seek(f, i, SEEK_SET) < 0) {
+				return -1;
+			}
+			return mod_loader.loader(m, f, i);
+		}
 	}
 	
 	return -1;

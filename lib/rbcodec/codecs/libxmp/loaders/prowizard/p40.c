@@ -14,18 +14,6 @@
 #define MAGIC_P41A	MAGIC4('P','4','1','A')
 
 
-static int test_p4x(uint8 *, int);
-static int depack_p4x (FILE *, FILE *);
-
-struct pw_format pw_p4x = {
-	"P4x",
-	"The Player 4.x",
-	0x00,
-	test_p4x,
-	depack_p4x
-};
-
-
 struct smp {
 	uint8 name[22];
 	int addr;
@@ -36,14 +24,14 @@ struct smp {
 	uint8 vol;
 };
 
-static int depack_p4x (FILE *in, FILE *out)
+static int depack_p4x(HIO_HANDLE *in, FILE *out)
 {
 	uint8 c1, c2, c3, c4, c5;
 	uint8 tmp[1024];
 	uint8 len, npat, nsmp;
 	uint8 sample, mynote, note[2];
 	uint8 tr[512][256];
-	short track_addr[128][4];
+	uint16 track_addr[128][4];
 	int trkdat_ofs, trktab_ofs, smp_ofs;
 	int ssize = 0;
 	int SampleAddress[31];
@@ -57,7 +45,8 @@ static int depack_p4x (FILE *in, FILE *out)
 	memset(SampleAddress, 0, 31 * 4);
 	memset(SampleSize, 0, 31 * 4);
 
-	id = read32b(in);
+	id = hio_read32b(in);
+#if 0
 	if (id == MAGIC_P40A) {
 		pw_p4x.id = "P40A";
 		pw_p4x.name = "The Player 4.0A";
@@ -68,36 +57,53 @@ static int depack_p4x (FILE *in, FILE *out)
 		pw_p4x.id = "P41A";
 		pw_p4x.name = "The Player 4.1A";
 	}
+#endif
 
-	npat = read8(in);		/* read Real number of pattern */
-	len = read8(in);		/* read number of pattern in list */
-	nsmp = read8(in);		/* read number of samples */
-	read8(in);			/* bypass empty byte */
-	trkdat_ofs = read32b(in);	/* read track data address */
-	trktab_ofs = read32b(in);	/* read track table address */
-	smp_ofs = read32b(in);		/* read sample data address */
+	npat = hio_read8(in);		/* read Real number of pattern */
+	len = hio_read8(in);		/* read number of patterns in list */
+
+	/* Sanity check */
+	if (len >= 128) {
+		return -1;
+	}
+
+	nsmp = hio_read8(in);		/* read number of samples */
+
+	/* Sanity check */
+	if (nsmp > 31) {
+		return -1;
+	}
+
+	hio_read8(in);			/* bypass empty byte */
+	trkdat_ofs = hio_read32b(in);	/* read track data address */
+	trktab_ofs = hio_read32b(in);	/* read track table address */
+	smp_ofs = hio_read32b(in);	/* read sample data address */
+
+	if (hio_error(in)) {
+		return -1;
+	}
 
 	pw_write_zero(out, 20);		/* write title */
 
 	/* sample headers stuff */
 	for (i = 0; i < nsmp; i++) {
-		ins.addr = read32b(in);		/* read sample address */
+		ins.addr = hio_read32b(in);		/* sample address */
 		SampleAddress[i] = ins.addr;
-		ins.size = read16b(in);		/* read sample size */
+		ins.size = hio_read16b(in);		/* sample size */
 		SampleSize[i] = ins.size * 2;
 		ssize += SampleSize[i];
-		ins.loop_addr = read32b(in);	/* loop start */
-		ins.loop_size = read16b(in);	/* loop size */
+		ins.loop_addr = hio_read32b(in);	/* loop start */
+		ins.loop_size = hio_read16b(in);	/* loop size */
 		ins.fine = 0;
 		if (id == MAGIC_P40A || id == MAGIC_P40B)
-			ins.fine = read16b(in);	/* finetune */
-		read8(in);			/* bypass 00h */
-		ins.vol = read8(in);		/* read vol */
+			ins.fine = hio_read16b(in);	/* finetune */
+		hio_read8(in);				/* bypass 00h */
+		ins.vol = hio_read8(in);		/* read vol */
 		if (id == MAGIC_P41A)
-			ins.fine = read16b(in);	/* finetune */
+			ins.fine = hio_read16b(in);	/* finetune */
 
 		/* writing now */
-		pw_write_zero(out, 22);		/* sample name */
+		pw_write_zero(out, 22);			/* sample name */
 		write16b(out, ins.size);
 		write8(out, ins.fine / 74);
 		write8(out, ins.vol);
@@ -114,7 +120,7 @@ static int depack_p4x (FILE *in, FILE *out)
 	write8(out, len);		/* write size of pattern list */
 	write8(out, 0x7f);		/* write noisetracker byte */
 
-	fseek(in, trktab_ofs + 4, SEEK_SET);
+	hio_seek(in, trktab_ofs + 4, SEEK_SET);
 
 	for (c1 = 0; c1 < len; c1++)	/* write pattern list */
 		write8(out, c1);
@@ -125,22 +131,22 @@ static int depack_p4x (FILE *in, FILE *out)
 
 	for (i = 0; i < len; i++) {	/* read all track addresses */
 		for (j = 0; j < 4; j++)
-			track_addr[i][j] = read16b(in) + trkdat_ofs + 4;
+			track_addr[i][j] = hio_read16b(in) + trkdat_ofs + 4;
 	}
 
-	fseek(in, trkdat_ofs + 4, SEEK_SET);
+	hio_seek(in, trkdat_ofs + 4, SEEK_SET);
 
 	for (i = 0; i < len; i++) {	/* rewrite the track data */
 		for (j = 0; j < 4; j++) {
 			int y, x = i * 4 + j;
 
-			fseek(in, track_addr[i][j], SEEK_SET);
+			hio_seek(in, track_addr[i][j], SEEK_SET);
 
 			for (k = 0; k < 64; k++) {
-				c1 = read8(in);
-				c2 = read8(in);
-				c3 = read8(in);
-				c4 = read8(in);
+				c1 = hio_read8(in);
+				c2 = hio_read8(in);
+				c3 = hio_read8(in);
+				c4 = hio_read8(in);
 
 				if (c1 != 0x80) {
 					sample = ((c1 << 4) & 0x10) |
@@ -188,18 +194,20 @@ static int depack_p4x (FILE *in, FILE *out)
 					continue;
 				}
 
-				a = ftell (in);
+				if ((a = hio_tell(in)) < 0) {
+					return -1;
+				}
 
 				c5 = c2;
 				b = (c3 << 8) + c4 + trkdat_ofs + 4;
 
-				fseek(in, b, SEEK_SET);
+				hio_seek(in, b, SEEK_SET);
 
 				for (c = 0; c <= c5; c++) {
-					c1 = read8(in);
-					c2 = read8(in);
-					c3 = read8(in);
-					c4 = read8(in);
+					c1 = hio_read8(in);
+					c2 = hio_read8(in);
+					c3 = hio_read8(in);
+					c4 = hio_read8(in);
 
 					sample = ((c1 << 4) & 0x10) |
 						((c2 >> 4) & 0x0f);
@@ -245,7 +253,7 @@ static int depack_p4x (FILE *in, FILE *out)
 					k++;
 				}
 				k--;
-				fseek(in, a, SEEK_SET);
+				hio_seek(in, a, SEEK_SET);
 			}
 		}
 	}
@@ -269,15 +277,14 @@ static int depack_p4x (FILE *in, FILE *out)
 
 	/* read and write sample data */
 	for (i = 0; i < nsmp; i++) {
-		fseek(in, SampleAddress[i] + smp_ofs, SEEK_SET);
+		hio_seek(in, SampleAddress[i] + smp_ofs, SEEK_SET);
 		pw_move_data(out, in, SampleSize[i]);
 	}
 
 	return 0;
 }
 
-
-static int test_p4x(uint8 *data, int s)
+static int test_p4x(uint8 *data, char *t, int s)
 {
 	//int j, k, l, o, n;
 	//int start = 0, ssize;
@@ -285,10 +292,12 @@ static int test_p4x(uint8 *data, int s)
 
 	id = readmem32b(data);
 
-	if (id == MAGIC_P40A || id == MAGIC_P40B || id == MAGIC_P41A)
-		return 0;
+	if (id != MAGIC_P40A && id != MAGIC_P40B && id != MAGIC_P41A)
+		return -1;
 
-	return -1;
+	pw_read_title(NULL, t, 0);
+
+	return 0;
 
 #if 0
 	/* number of pattern (real) */
@@ -335,3 +344,10 @@ static int test_p4x(uint8 *data, int s)
 	return 0;
 #endif
 }
+
+const struct pw_format pw_p4x = {
+	"The Player 4.x",
+	test_p4x,
+	depack_p4x
+};
+

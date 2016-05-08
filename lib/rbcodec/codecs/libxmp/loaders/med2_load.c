@@ -1,45 +1,52 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /*
  * MED 1.12 is in Fish disk #255
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #ifdef __native_client__
 #include <sys/syslimits.h>
 #else
 #include <limits.h>
 #endif
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "../lib/rbcodec/codecs/libxmp/include/period.h"
-#include "load.h"
+#include "libxmp/period.h"
+#include "libxmp/loaders/loader.h"
 
 #define MAGIC_MED2	MAGIC4('M','E','D',2)
 
-static int med2_test(FILE *, char *, const int);
-static int med2_load (struct xmp_context *, FILE *, const int);
+static int med2_test(HIO_HANDLE *, char *, const int);
+static int med2_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info med2_loader = {
-	"MED2",
-	"MED 1.12",
+const struct format_loader med2_loader = {
+	"MED 1.12 MED2",
 	med2_test,
 	med2_load
 };
 
 
-static int med2_test(FILE *f, char *t, const int start)
+static int med2_test(HIO_HANDLE *f, char *t, const int start)
 {
-	if (read32b(f) !=  MAGIC_MED2)
+	if (hio_read32b(f) !=  MAGIC_MED2)
 		return -1;
 
         read_title(f, t, 0);
@@ -48,108 +55,120 @@ static int med2_test(FILE *f, char *t, const int start)
 }
 
 
-int med2_load(struct xmp_context *ctx, FILE *f, const int start)
+int med2_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
 	int i, j, k;
 	int sliding;
-	struct xxm_event *event;
+	struct xmp_event *event;
 	uint8 buf[40];
 
 	LOAD_INIT();
 
-	if (read32b(f) !=  MAGIC_MED2)
+	if (hio_read32b(f) != MAGIC_MED2)
 		return -1;
 
-	strcpy(m->type, "MED2 (MED 1.12)");
+	set_type(m, "MED 1.12 MED2");
 
-	m->xxh->ins = m->xxh->smp = 32;
-	INSTRUMENT_INIT();
+	mod->ins = mod->smp = 32;
+
+	if (instrument_init(mod) < 0)
+		return -1;
 
 	/* read instrument names */
-	fread(buf, 1, 40, f);	/* skip 0 */
+	hio_read(buf, 1, 40, f);	/* skip 0 */
 	for (i = 0; i < 31; i++) {
-		fread(buf, 1, 40, f);
-		copy_adjust(m->xxih[i].name, buf, 32);
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
+		hio_read(buf, 1, 40, f);
+		instrument_name(mod, i, buf, 32);
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
 	}
 
 	/* read instrument volumes */
-	read8(f);		/* skip 0 */
+	hio_read8(f);		/* skip 0 */
 	for (i = 0; i < 31; i++) {
-		m->xxi[i][0].vol = read8(f);
-		m->xxi[i][0].pan = 0x80;
-		m->xxi[i][0].fin = 0;
-		m->xxi[i][0].sid = i;
+		mod->xxi[i].sub[0].vol = hio_read8(f);
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxi[i].sub[0].fin = 0;
+		mod->xxi[i].sub[0].sid = i;
 	}
 
 	/* read instrument loops */
-	read16b(f);		/* skip 0 */
+	hio_read16b(f);		/* skip 0 */
 	for (i = 0; i < 31; i++) {
-		m->xxs[i].lps = read16b(f);
+		mod->xxs[i].lps = hio_read16b(f);
 	}
 
 	/* read instrument loop length */
-	read16b(f);		/* skip 0 */
+	hio_read16b(f);		/* skip 0 */
 	for (i = 0; i < 31; i++) {
-		uint32 lsiz = read16b(f);
-		m->xxs[i].lpe = m->xxs[i].lps + lsiz;
-		m->xxs[i].flg = lsiz > 1 ? WAVE_LOOPING : 0;
+		uint32 lsiz = hio_read16b(f);
+		mod->xxs[i].lpe = mod->xxs[i].lps + lsiz;
+		mod->xxs[i].flg = lsiz > 1 ? XMP_SAMPLE_LOOP : 0;
 	}
 
-	m->xxh->chn = 4;
-	m->xxh->pat = read16b(f);
-	m->xxh->trk = m->xxh->chn * m->xxh->pat;
+	mod->chn = 4;
+	mod->pat = hio_read16b(f);
+	mod->trk = mod->chn * mod->pat;
 
-	fread(m->xxo, 1, 100, f);
-	m->xxh->len = read16b(f);
+	if (hio_read(mod->xxo, 1, 100, f) != 100)
+		return -1;
 
-	m->xxh->tpo = 192 / read16b(f);
+	mod->len = hio_read16b(f);
 
-	read16b(f);			/* flags */
-	sliding = read16b(f);		/* sliding */
-	read32b(f);			/* jumping mask */
-	fseek(f, 16, SEEK_CUR);		/* rgb */
+	/* Sanity check */
+	if (mod->pat > 256 || mod->len > 100)
+		return -1;
+
+	k = hio_read16b(f);
+	if (k < 1) {
+		return -1;
+	}
+
+	mod->spd = 192 / k;
+
+	hio_read16b(f);			/* flags */
+	sliding = hio_read16b(f);	/* sliding */
+	hio_read32b(f);			/* jumping mask */
+	hio_seek(f, 16, SEEK_CUR);	/* rgb */
 
 	MODULE_INFO();
 
-	reportv(ctx, 0, "Sliding        : %d\n", sliding);
+	D_(D_INFO "Sliding: %d", sliding);
 
 	if (sliding == 6)
-		m->quirk |= XMP_QRK_VSALL | XMP_QRK_PBALL;
+		m->quirk |= QUIRK_VSALL | QUIRK_PBALL;
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0)
+		return -1;
 
 	/* Load and convert patterns */
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	D_(D_INFO "Stored patterns: %d", mod->pat);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC(i);
-		m->xxp[i]->rows = 64;
-		TRACK_ALLOC(i);
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_tracks_alloc(mod, i, 64) < 0)
+			return -1;
 
-		read32b(f);
+		hio_read32b(f);
 
 		for (j = 0; j < 64; j++) {
 			for (k = 0; k < 4; k++) {
 				uint8 x;
 				event = &EVENT(i, k, j);
-				event->note = period_to_note(read16b(f));
-				x = read8(f);
+				event->note = period_to_note(hio_read16b(f));
+				x = hio_read8(f);
 				event->ins = x >> 4;
 				event->fxt = x & 0x0f;
-				event->fxp = read8(f);
+				event->fxp = hio_read8(f);
 
 				switch (event->fxt) {
 				case 0x00:		/* arpeggio */
 				case 0x01:		/* slide up */
 				case 0x02:		/* slide down */
+				case 0x03:		/* portamento */
+				case 0x04:		/* vibrato? */
 				case 0x0c:		/* volume */
 					break;		/* ...like protracker */
-				case 0x03:
-					event->fxt = FX_VIBRATO;
-					break;
 				case 0x0d:		/* volslide */
 				case 0x0e:		/* volslide */
 					event->fxt = FX_VOLSLIDE;
@@ -160,60 +179,55 @@ int med2_load(struct xmp_context *ctx, FILE *f, const int start)
 				}
 			}
 		}
-
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
 
 	/* Load samples */
 
-	reportv(ctx, 0, "Instruments    : %d ", m->xxh->ins);
-	reportv(ctx, 1, "\n     Instrument name                  Len  LBeg LEnd L Vol");
+	D_(D_INFO "Instruments    : %d ", mod->ins);
 
 	for (i = 0; i < 31; i++) {
 		char path[PATH_MAX];
 		char ins_path[256];
 		char name[256];
-		FILE *s = NULL;
-		struct stat stat;
+		HIO_HANDLE *s = NULL;
 		int found;
-		char c;
 
-		get_instrument_path(ctx, "XMP_MED2_INSTRUMENT_PATH",
-				ins_path, 256);
+		get_instrument_path(m, ins_path, 256);
 		found = check_filename_case(ins_path,
-				(char *)m->xxih[i].name, name, 256);
+				(char *)mod->xxi[i].name, name, 256);
 
-		c = 'x';
 		if (found) {
 			snprintf(path, PATH_MAX, "%s/%s", ins_path, name);
-			if ((s = fopen(path, "rb"))) {
-				fstat(fileno(s), &stat);
-				m->xxs[i].len = stat.st_size;
-				c = '.';
+			if ((s = hio_open(path, "rb"))) {
+				mod->xxs[i].len = hio_size(s);
 			}
 		}
 
-		m->xxih[i].nsm = !!(m->xxs[i].len);
-
-		if (!strlen((char *)m->xxih[i].name) && !m->xxs[i].len)
-			continue;
-
-		reportv(ctx, 1, "\n[%2X] %-32.32s %04x %04x %04x %c V%02x ",
-			i, m->xxih[i].name, m->xxs[i].len, m->xxs[i].lps,
-			m->xxs[i].lpe,
-			m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-			m->xxi[i][0].vol);
-
-		if (found) {
-			xmp_drv_loadpatch(ctx, s, m->xxi[i][0].sid, m->c4rate,
-				0, &m->xxs[m->xxi[i][0].sid], NULL);
-			fclose(s);
+		if (mod->xxs[i].len > 0) {
+			mod->xxi[i].nsm = 1;
 		}
 
-		reportv(ctx, 0, "%c", c);
+		if (!strlen((char *)mod->xxi[i].name) && !mod->xxs[i].len) {
+			if (s != NULL) {
+				hio_close(s);
+			}
+			continue;
+		}
+
+		D_(D_INFO "[%2X] %-32.32s %04x %04x %04x %c V%02x",
+			i, mod->xxi[i].name, mod->xxs[i].len, mod->xxs[i].lps,
+			mod->xxs[i].lpe,
+			mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+			mod->xxi[i].sub[0].vol);
+
+		if (s != NULL) {
+			int ret = load_sample(m, s, 0, &mod->xxs[i], NULL);
+			hio_close(s);
+			if (ret < 0) {
+				return -1;
+			}
+		}
 	}
-	reportv(ctx, 0, "\n");
 
 	return 0;
 }

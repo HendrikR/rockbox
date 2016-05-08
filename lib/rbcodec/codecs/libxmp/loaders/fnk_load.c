@@ -1,45 +1,51 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 
 #define MAGIC_Funk	MAGIC4('F','u','n','k')
 
 
-static int fnk_test (FILE *, char *, const int);
-static int fnk_load (struct xmp_context *, FILE *, const int);
+static int fnk_test (HIO_HANDLE *, char *, const int);
+static int fnk_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info fnk_loader = {
-    "FNK",
+const struct format_loader fnk_loader = {
     "Funktracker",
     fnk_test,
     fnk_load
 };
 
-static int fnk_test(FILE *f, char *t, const int start)
+static int fnk_test(HIO_HANDLE *f, char *t, const int start)
 {
     uint8 a, b;
     int size;
-    struct stat st;
 
-    if (read32b(f) != MAGIC_Funk)
+    if (hio_read32b(f) != MAGIC_Funk)
 	return -1;
 
-    read8(f); 
-    a = read8(f);
-    b = read8(f); 
-    read8(f); 
+    hio_read8(f); 
+    a = hio_read8(f);
+    b = hio_read8(f); 
+    hio_read8(f); 
 
     if ((a >> 1) < 10)			/* creation year (-1980) */
 	return -1;
@@ -47,13 +53,12 @@ static int fnk_test(FILE *f, char *t, const int start)
     if (MSN(b) > 7 || LSN(b) > 9)	/* CPU and card */
 	return -1;
 
-    size = read32l(f);
+    size = hio_read32l(f);
     if (size < 1024)
 	return -1;
 
-    fstat(fileno(f), &st);
-    if (size != st.st_size)
-	return -1;
+    if (hio_size(f) != size)
+        return -1;
 
     read_title(f, t, 0);
 
@@ -84,55 +89,60 @@ struct fnk_header {
 };
 
 
-static int fnk_load(struct xmp_context *ctx, FILE *f, const int start)
+static int fnk_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
+    struct xmp_module *mod = &m->mod;
     int i, j;
-    int day, month, year;
-    struct xxm_event *event;
+    /* int day, month, year; */
+    struct xmp_event *event;
     struct fnk_header ffh;
     uint8 ev[3];
 
     LOAD_INIT();
 
-    fread(&ffh.marker, 4, 1, f);
-    fread(&ffh.info, 4, 1, f);
-    ffh.filesize = read32l(f);
-    fread(&ffh.fmt, 4, 1, f);
-    ffh.loop = read8(f);
-    fread(&ffh.order, 256, 1, f);
-    fread(&ffh.pbrk, 128, 1, f);
+    hio_read(&ffh.marker, 4, 1, f);
+    hio_read(&ffh.info, 4, 1, f);
+    ffh.filesize = hio_read32l(f);
+    hio_read(&ffh.fmt, 4, 1, f);
+    ffh.loop = hio_read8(f);
+    hio_read(&ffh.order, 256, 1, f);
+    hio_read(&ffh.pbrk, 128, 1, f);
+
+    for (i = 0; i < 128; i++) {
+        if (ffh.pbrk[i] >= 64) {
+            return -1;
+        }
+    }
 
     for (i = 0; i < 64; i++) {
-	fread(&ffh.fih[i].name, 19, 1, f);
-	ffh.fih[i].loop_start = read32l(f);
-	ffh.fih[i].length = read32l(f);
-	ffh.fih[i].volume = read8(f);
-	ffh.fih[i].pan = read8(f);
-	ffh.fih[i].shifter = read8(f);
-	ffh.fih[i].waveform = read8(f);
-	ffh.fih[i].retrig = read8(f);
+	hio_read(&ffh.fih[i].name, 19, 1, f);
+	ffh.fih[i].loop_start = hio_read32l(f);
+	ffh.fih[i].length = hio_read32l(f);
+	ffh.fih[i].volume = hio_read8(f);
+	ffh.fih[i].pan = hio_read8(f);
+	ffh.fih[i].shifter = hio_read8(f);
+	ffh.fih[i].waveform = hio_read8(f);
+	ffh.fih[i].retrig = hio_read8(f);
     }
 
-    day = ffh.info[0] & 0x1f;
+    /* day = ffh.info[0] & 0x1f;
     month = ((ffh.info[1] & 0x01) << 3) | ((ffh.info[0] & 0xe0) >> 5);
-    year = 1980 + ((ffh.info[1] & 0xfe) >> 1);
+    year = 1980 + ((ffh.info[1] & 0xfe) >> 1); */
 
-    m->xxh->smp = m->xxh->ins = 64;
+    mod->smp = mod->ins = 64;
 
     for (i = 0; i < 256 && ffh.order[i] != 0xff; i++) {
-	if (ffh.order[i] > m->xxh->pat)
-	    m->xxh->pat = ffh.order[i];
+	if (ffh.order[i] > mod->pat)
+	    mod->pat = ffh.order[i];
     }
-    m->xxh->pat++;
+    mod->pat++;
 
-    m->xxh->len = i;
-    memcpy (m->xxo, ffh.order, m->xxh->len);
+    mod->len = i;
+    memcpy (mod->xxo, ffh.order, mod->len);
 
-    m->xxh->tpo = 4;
-    m->xxh->bpm = 125;
-    m->xxh->chn = 0;
+    mod->spd = 4;
+    mod->bpm = 125;
+    mod->chn = 0;
 
     /*
      * If an R1 fmt (funktype = Fk** or Fv**), then ignore byte 3. It's
@@ -140,73 +150,78 @@ static int fnk_load(struct xmp_context *ctx, FILE *f, const int start)
      */
     if (ffh.fmt[0] == 'F' && ffh.fmt[1] == '2') {
 	if (((int8)ffh.info[3] >> 1) & 0x40)
-	    m->xxh->bpm -= (ffh.info[3] >> 1) & 0x3f;
+	    mod->bpm -= (ffh.info[3] >> 1) & 0x3f;
 	else
-	    m->xxh->bpm += (ffh.info[3] >> 1) & 0x3f;
+	    mod->bpm += (ffh.info[3] >> 1) & 0x3f;
 
-	strcpy(m->type, "FNK R2 (FunktrackerGOLD)");
+	set_type(m, "FunktrackerGOLD");
     } else if (ffh.fmt[0] == 'F' && (ffh.fmt[1] == 'v' || ffh.fmt[1] == 'k')) {
-	strcpy(m->type, "FNK R1 (Funktracker)");
+	set_type(m, "Funktracker");
     } else {
-	m->xxh->chn = 8;
-	strcpy(m->type, "FNK R0 (Funktracker DOS32)");
+	mod->chn = 8;
+	set_type(m, "Funktracker DOS32");
     }
 
-    if (m->xxh->chn == 0) {
-	m->xxh->chn = (ffh.fmt[2] < '0') || (ffh.fmt[2] > '9') ||
+    if (mod->chn == 0) {
+	mod->chn = (ffh.fmt[2] < '0') || (ffh.fmt[2] > '9') ||
 		(ffh.fmt[3] < '0') || (ffh.fmt[3] > '9') ? 8 :
 		(ffh.fmt[2] - '0') * 10 + ffh.fmt[3] - '0';
     }
 
-    m->xxh->bpm = 4 * m->xxh->bpm / 5;
-    m->xxh->trk = m->xxh->chn * m->xxh->pat;
+    mod->bpm = 4 * mod->bpm / 5;
+    mod->trk = mod->chn * mod->pat;
+
     /* FNK allows mode per instrument but we don't, so use linear like 669 */
-    m->xxh->flg |= XXM_FLG_LINEAR;
+    m->quirk |= QUIRK_LINEAR;
 
     MODULE_INFO();
+    /* D_(D_INFO "Creation date: %02d/%02d/%04d", day, month, year); */
 
-    reportv(ctx, 0, "Creation date  : %02d/%02d/%04d\n", day, month, year);
-
-    INSTRUMENT_INIT();
+    if (instrument_init(mod) < 0)
+	return -1;
 
     /* Convert instruments */
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc(sizeof (struct xxm_instrument), 1);
-	m->xxih[i].nsm = !!(m->xxs[i].len = ffh.fih[i].length);
-	m->xxs[i].lps = ffh.fih[i].loop_start;
-	if (m->xxs[i].lps == -1)
-	    m->xxs[i].lps = 0;
-	m->xxs[i].lpe = ffh.fih[i].length;
-	m->xxs[i].flg = ffh.fih[i].loop_start != -1 ? WAVE_LOOPING : 0;
-	m->xxi[i][0].vol = ffh.fih[i].volume;
-	m->xxi[i][0].pan = ffh.fih[i].pan;
-	m->xxi[i][0].sid = i;
+    for (i = 0; i < mod->ins; i++) {
+	if (subinstrument_alloc(mod, i, 1) < 0)
+	    return -1;
 
-	copy_adjust(m->xxih[i].name, ffh.fih[i].name, 19);
+	mod->xxs[i].len = ffh.fih[i].length;
+	mod->xxs[i].lps = ffh.fih[i].loop_start;
+	if (mod->xxs[i].lps == -1)
+	    mod->xxs[i].lps = 0;
+	mod->xxs[i].lpe = ffh.fih[i].length;
+	mod->xxs[i].flg = ffh.fih[i].loop_start != -1 ? XMP_SAMPLE_LOOP : 0;
+	mod->xxi[i].sub[0].vol = ffh.fih[i].volume;
+	mod->xxi[i].sub[0].pan = ffh.fih[i].pan;
+	mod->xxi[i].sub[0].sid = i;
 
-	if ((V(1)) && (strlen((char *)m->xxih[i].name) || m->xxs[i].len > 2))
-	    report ("[%2X] %-20.20s %04x %04x %04x %c V%02x P%02x\n", i,
-		m->xxih[i].name,
-		m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe,
-		m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-		m->xxi[i][0].vol, m->xxi[i][0].pan);
+	if (mod->xxs[i].len > 0)
+	     mod->xxi[i].nsm = 1;
+
+	instrument_name(mod, i, ffh.fih[i].name, 19);
+
+	D_(D_INFO "[%2X] %-20.20s %04x %04x %04x %c V%02x P%02x", i,
+		mod->xxi[i].name,
+		mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,
+		mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+		mod->xxi[i].sub[0].vol, mod->xxi[i].sub[0].pan);
     }
 
-    PATTERN_INIT();
+    if (pattern_init(mod) < 0)
+	return -1;
 
     /* Read and convert patterns */
-    reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+    D_(D_INFO "Stored patterns: %d", mod->pat);
 
-    for (i = 0; i < m->xxh->pat; i++) {
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	TRACK_ALLOC (i);
+    for (i = 0; i < mod->pat; i++) {
+	if (pattern_tracks_alloc(mod, i, 64) < 0)
+	    return -1;
 
 	EVENT(i, 1, ffh.pbrk[i]).f2t = FX_BREAK;
 
-	for (j = 0; j < 64 * m->xxh->chn; j++) {
-	    event = &EVENT(i, j % m->xxh->chn, j / m->xxh->chn);
-	    fread(&ev, 1, 3, f);
+	for (j = 0; j < 64 * mod->chn; j++) {
+	    event = &EVENT(i, j % mod->chn, j / mod->chn);
+	    hio_read(&ev, 1, 3, f);
 
 	    switch (ev[0] >> 2) {
 	    case 0x3f:
@@ -214,7 +229,7 @@ static int fnk_load(struct xmp_context *ctx, FILE *f, const int start)
 	    case 0x3d:
 		break;
 	    default:
-		event->note = 25 + (ev[0] >> 2);
+		event->note = 37 + (ev[0] >> 2);
 		event->ins = 1 + MSN(ev[1]) + ((ev[0] & 0x03) << 4);
 		event->vol = ffh.fih[event->ins - 1].volume;
 	    }
@@ -276,35 +291,30 @@ static int fnk_load(struct xmp_context *ctx, FILE *f, const int start)
 		    event->fxp = 8 + (LSN(ev[2]) << 4);	
 		    break;
 		case 0xf:
-		    event->fxt = FX_TEMPO;
+		    event->fxt = FX_SPEED;
 		    event->fxp = LSN(ev[2]);	
 		    break;
 		}
 	    }
 	}
-	reportv(ctx, 0, ".");
     }
 
     /* Read samples */
-    reportv(ctx, 0, "\nStored samples : %d ", m->xxh->smp);
+    D_(D_INFO "Stored samples: %d", mod->smp);
 
-    for (i = 0; i < m->xxh->ins; i++) {
-	if (m->xxs[i].len <= 2)
+    for (i = 0; i < mod->ins; i++) {
+	if (mod->xxs[i].len <= 2)
 	    continue;
 
-	xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate, 0,
-							&m->xxs[i], NULL);
-
-	reportv(ctx, 0, ".");
+	if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+	    return -1;
     }
 
-    reportv(ctx, 0, "\n");
-
-    for (i = 0; i < m->xxh->chn; i++)
-	m->xxc[i].pan = 0x80;
+    for (i = 0; i < mod->chn; i++)
+	mod->xxc[i].pan = 0x80;
 
     m->volbase = 0xff;
-    m->quirk = XMP_QRK_VSALL;
+    m->quirk = QUIRK_VSALL;
 
     return 0;
 }

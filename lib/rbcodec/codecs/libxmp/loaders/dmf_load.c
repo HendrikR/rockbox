@@ -1,50 +1,63 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * DMF sample decompressor Copyright (C) 2000 Olivier Lapicque
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+/*
+ * Public domain DMF sample decompressor by Olivier Lapicque
+ */
 
 #include <assert.h>
 
-#include "load.h"
-#include "iff.h"
-#include "../lib/rbcodec/codecs/libxmp/include/period.h"
+#include "libxmp/loaders/loader.h"
+#include "libxmp/loaders/iff.h"
+#include "libxmp/period.h"
 
 #define MAGIC_DDMF	MAGIC4('D','D','M','F')
 
 
-static int dmf_test(FILE *, char *, const int);
-static int dmf_load (struct xmp_context *, FILE *, const int);
+static int dmf_test(HIO_HANDLE *, char *, const int);
+static int dmf_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info dmf_loader = {
-	"DMF",
+const struct format_loader dmf_loader = {
 	"X-Tracker",
 	dmf_test,
 	dmf_load
 };
 
-static int dmf_test(FILE * f, char *t, const int start)
+static int dmf_test(HIO_HANDLE * f, char *t, const int start)
 {
-	if (read32b(f) != MAGIC_DDMF)
+	if (hio_read32b(f) != MAGIC_DDMF)
 		return -1;
 
-	fseek(f, 9, SEEK_CUR);
+	hio_seek(f, 9, SEEK_CUR);
 	read_title(f, t, 30);
 
 	return 0;
 }
 
 
-static int ver;
-static uint8 packtype[256];
+struct local_data {
+	int ver;
+	uint8 packtype[256];
+};
 
 
 struct hnode {
@@ -159,60 +172,60 @@ static int unpack(uint8 *psample, uint8 *ibuf, uint8 *ibufmax, uint32 maxlen)
  * IFF chunk handlers
  */
 
-static void get_sequ(struct xmp_context *ctx, int size, FILE *f)
+static int get_sequ(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
 	int i;
 
-	read16l(f);	/* sequencer loop start */
-	read16l(f);	/* sequencer loop end */
+	hio_read16l(f);	/* sequencer loop start */
+	hio_read16l(f);	/* sequencer loop end */
 
-	m->xxh->len = (size - 4) / 2;
-	if (m->xxh->len > 255)
-		m->xxh->len = 255;
+	mod->len = (size - 4) / 2;
+	if (mod->len > 255)
+		mod->len = 255;
 
-	for (i = 0; i < m->xxh->len; i++)
-		m->xxo[i] = read16l(f);
+	for (i = 0; i < mod->len; i++)
+		mod->xxo[i] = hio_read16l(f);
+
+	return 0;
 }
 
-static void get_patt(struct xmp_context *ctx, int size, FILE *f)
+static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
 	int i, j, r, chn;
 	int patsize;
 	int info, counter, data;
 	int track_counter[32];
-	struct xxm_event *event;
+	struct xmp_event *event;
 
-	m->xxh->pat = read16l(f);
-	m->xxh->chn = read8(f);
-	m->xxh->trk = m->xxh->chn * m->xxh->pat;
+	mod->pat = hio_read16l(f);
+	mod->chn = hio_read8(f);
+	mod->trk = mod->chn * mod->pat;
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0)
+		return -1;
 
-	if (V(0))
-		report("Stored patterns: %d ", m->xxh->pat);
+	D_(D_INFO "Stored patterns: %d", mod->pat);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC(i);
-		chn = read8(f);
-		read8(f);		/* beat */
-		m->xxp[i]->rows = read16l(f);
-		TRACK_ALLOC(i);
+	for (i = 0; i < mod->pat; i++) {
+		chn = hio_read8(f);
+		hio_read8(f);		/* beat */
 
-		patsize = read32l(f);
+		if (pattern_tracks_alloc(mod, i, hio_read16l(f)) < 0)
+			return -1;
+
+		patsize = hio_read32l(f);
 
 		for (j = 0; j < chn; j++)
 			track_counter[j] = 0;
 
-		for (counter = r = 0; r < m->xxp[i]->rows; r++) {
+		for (counter = r = 0; r < mod->xxp[i]->rows; r++) {
 			if (counter == 0) {
 				/* global track */
-				info = read8(f);
-				counter = info & 0x80 ? read8(f) : 0;
-				data = info & 0x3f ? read8(f) : 0;
+				info = hio_read8(f);
+				counter = info & 0x80 ? hio_read8(f) : 0;
+				data = info & 0x3f ? hio_read8(f) : 0;
 			} else {
 				counter--;
 			}
@@ -223,27 +236,27 @@ static void get_patt(struct xmp_context *ctx, int size, FILE *f)
 				event = &EVENT(i, j, r);
 
 				if (track_counter[j] == 0) {
-					b = read8(f);
+					b = hio_read8(f);
 		
 					if (b & 0x80)
-						track_counter[j] = read8(f);
+						track_counter[j] = hio_read8(f);
 					if (b & 0x40)
-						event->ins = read8(f);
+						event->ins = hio_read8(f);
 					if (b & 0x20)
-						event->note = 12 + read8(f);
+						event->note = 24 + hio_read8(f);
 					if (b & 0x10)
-						event->vol = read8(f);
+						event->vol = hio_read8(f);
 					if (b & 0x08) {	/* instrument effect */
-						fxt = read8(f);
-						fxp = read8(f);
+						fxt = hio_read8(f);
+						fxp = hio_read8(f);
 					}
 					if (b & 0x04) {	/* note effect */
-						fxt = read8(f);
-						fxp = read8(f);
+						fxt = hio_read8(f);
+						fxp = hio_read8(f);
 					}
 					if (b & 0x02) {	/* volume effect */
-						fxt = read8(f);
-						fxp = read8(f);
+						fxt = hio_read8(f);
+						fxp = hio_read8(f);
 						switch (fxt) {
 						case 0x02:
 							event->fxt = FX_VOLSLIDE_DN;
@@ -256,151 +269,191 @@ static void get_patt(struct xmp_context *ctx, int size, FILE *f)
 				}
 			}
 		}
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
+
+	return 0;
 }
 
-static void get_smpi(struct xmp_context *ctx, int size, FILE *f)
+static int get_smpi(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
+	struct local_data *data = (struct local_data *)parm;
 	int i, namelen, c3spd, flag;
 	uint8 name[30];
 
-	m->xxh->ins = m->xxh->smp = read8(f);
+	mod->ins = mod->smp = hio_read8(f);
 
-	INSTRUMENT_INIT();
+	if (instrument_init(mod) < 0)
+		return -1;
 
-	reportv(ctx, 0, "Instruments    : %d\n", m->xxh->ins);
+	D_(D_INFO "Instruments: %d", mod->ins);
 
-	for (i = 0; i < m->xxh->ins; i++) {
+	for (i = 0; i < mod->ins; i++) {
 		int x;
 
-		m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
 		
-		namelen = read8(f);
-		x = namelen - fread(name, 1, namelen > 30 ? 30 : namelen, f);
-		copy_adjust(m->xxih[i].name, name, namelen);
+		namelen = hio_read8(f);
+		x = namelen - hio_read(name, 1, namelen > 30 ? 30 : namelen, f);
+		instrument_name(mod, i, name, namelen);
 		name[namelen] = 0;
 		while (x--)
-			read8(f);
+			hio_read8(f);
 
-		m->xxs[i].len = read32l(f);
-		m->xxs[i].lps = read32l(f);
-		m->xxs[i].lpe = read32l(f);
-		m->xxih[i].nsm = !!m->xxs[i].len;
-		c3spd = read16l(f);
-		c2spd_to_note(c3spd, &m->xxi[i][0].xpo, &m->xxi[i][0].fin);
-		m->xxi[i][0].vol = read8(f);
-		m->xxi[i][0].pan = 0x80;
-		m->xxi[i][0].sid = i;
-		flag = read8(f);
-		m->xxs[i].flg = flag & 0x01 ? WAVE_LOOPING : 0;
-		if (ver >= 8)
-			fseek(f, 8, SEEK_CUR);	/* library name */
-		read16l(f);	/* reserved -- specs say 1 byte only*/
-		read32l(f);	/* sampledata crc32 */
+		mod->xxs[i].len = hio_read32l(f);
+		mod->xxs[i].lps = hio_read32l(f);
+		mod->xxs[i].lpe = hio_read32l(f);
+		mod->xxi[i].nsm = !!mod->xxs[i].len;
+		c3spd = hio_read16l(f);
+		c2spd_to_note(c3spd, &mod->xxi[i].sub[0].xpo, &mod->xxi[i].sub[0].fin);
+		mod->xxi[i].sub[0].vol = hio_read8(f);
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxi[i].sub[0].sid = i;
+		flag = hio_read8(f);
+		mod->xxs[i].flg = flag & 0x01 ? XMP_SAMPLE_LOOP : 0;
+		if (data->ver >= 8)
+			hio_seek(f, 8, SEEK_CUR);	/* library name */
+		hio_read16l(f);	/* reserved -- specs say 1 byte only*/
+		hio_read32l(f);	/* sampledata crc32 */
 
-		packtype[i] = (flag & 0x0c) >> 2;
-		if (V(1) && (strlen((char*)m->xxih[i].name) || (m->xxs[i].len > 1))) {
-			report("[%2X] %-30.30s %05x %05x %05x %c P%c %5d V%02x\n",
-				i, name, m->xxs[i].len, m->xxs[i].lps & 0xfffff,
-				m->xxs[i].lpe & 0xfffff,
-				m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-				'0' + packtype[i],
-				c3spd, m->xxi[i][0].vol);
-		}
+		data->packtype[i] = (flag & 0x0c) >> 2;
+		D_(D_INFO "[%2X] %-30.30s %05x %05x %05x %c P%c %5d V%02x",
+				i, name, mod->xxs[i].len, mod->xxs[i].lps & 0xfffff,
+				mod->xxs[i].lpe & 0xfffff,
+				mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+				'0' + data->packtype[i],
+				c3spd, mod->xxi[i].sub[0].vol);
+	}
+
+	return 0;
+}
+
+struct dynamic_buffer
+{
+	uint32 size;
+	uint8* data;
+};
+
+static int dynamic_buffer_alloc(struct dynamic_buffer* buf, uint32 size)
+{
+	uint8* data;
+	if (buf->size >= size)
+	  return 0;
+	if (!buf->data)
+	  data = malloc(size);
+	else
+	  data = realloc(buf->data, size);
+	if (data) {
+	  buf->data = data;
+	  buf->size = size;
+	  return 0;
+	} else {
+	  return -1;
 	}
 }
 
-static void get_smpd(struct xmp_context *ctx, int size, FILE *f)
+static void dynamic_buffer_free(struct dynamic_buffer* buf)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	free(buf->data);
+}
+
+static int get_smpd(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+{
+	struct xmp_module *mod = &m->mod;
+	struct local_data *data = (struct local_data *)parm;
 	int i;
-	int smpsize;
-	uint8 *data, *ibuf;
+	struct dynamic_buffer sbuf = {0}, ibuf = {0};
 
-	reportv(ctx, 0, "Stored samples : %d ", m->xxh->ins);
+	D_(D_INFO "Stored samples: %d", mod->smp);
 
-	for (smpsize = i = 0; i < m->xxh->smp; i++) {
-		if (m->xxs[i].len > smpsize)
-			smpsize = m->xxs[i].len;
-	}
-
-	/* why didn't we mmap this? */
-	data = malloc(smpsize);
-	assert(data != NULL);
-	ibuf = malloc(smpsize);
-	assert(ibuf != NULL);
-
-	for (i = 0; i < m->xxh->smp; i++) {
-		smpsize = read32l(f);
-		if (smpsize == 0)
+	for (i = 0; i < mod->smp; i++) {
+		uint32 samplesize = mod->xxs[i].len;
+		uint32 datasize = hio_read32l(f);
+		if (datasize == 0)
 			continue;
 
-		switch (packtype[i]) {
+		switch (data->packtype[i]) {
 		case 0:
-			xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate,
-						0, &m->xxs[m->xxi[i][0].sid], NULL);
+      if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+				goto error;
 			break;
 		case 1:
-			fread(ibuf, smpsize, 1, f);
-			unpack(data, ibuf, ibuf + smpsize, m->xxs[i].len);
-			xmp_drv_loadpatch(ctx, NULL, i, m->c4rate,
-					XMP_SMP_NOLOAD, &m->xxs[i], (char *)data);
+      if (dynamic_buffer_alloc(&ibuf, datasize) < 0)
+				goto error;
+      if (hio_read(ibuf.data, 1, datasize, f) != datasize)
+				goto error;
+      if (dynamic_buffer_alloc(&sbuf, samplesize) < 0)
+				goto error;
+			unpack(sbuf.data, ibuf.data, ibuf.data + datasize, samplesize);
+			if (load_sample(m, NULL, SAMPLE_FLAG_NOLOAD,
+        &mod->xxs[i], (char *)sbuf.data) < 0)
+        goto error;
 			break;
 		default:
-			fseek(f, smpsize, SEEK_CUR);
+			hio_seek(f, datasize, SEEK_CUR);
 		}
-		reportv(ctx, 0, packtype[i] ? "c" : ".");
 	}
-	reportv(ctx, 0, "\n");
-
-	free(ibuf);
-	free(data);
+	dynamic_buffer_free(&ibuf);
+	dynamic_buffer_free(&sbuf);
+	return 0;
+error:
+	dynamic_buffer_free(&ibuf);
+	dynamic_buffer_free(&sbuf);
+	return -1;
 }
 
-static int dmf_load(struct xmp_context *ctx, FILE *f, const int start)
+static int dmf_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
+	iff_handle handle;
 	uint8 date[3];
 	char tracker_name[10];
+	struct local_data data;
+	int ret;
 
 	LOAD_INIT();
 
-	read32b(f);		/* DDMF */
+	hio_read32b(f);		/* DDMF */
 
-	ver = read8(f);
-	fread(tracker_name, 8, 1, f);
+	data.ver = hio_read8(f);
+	hio_read(tracker_name, 8, 1, f);
 	tracker_name[8] = 0;
-	snprintf(m->type, XMP_NAMESIZE,
-		"D-Lusion Digital Music File v%d (%s)", ver, tracker_name);
+	snprintf(mod->type, XMP_NAME_SIZE, "%s DMF v%d",
+				tracker_name, data.ver);
 	tracker_name[8] = 0;
-	fread(m->name, 30, 1, f);
-	fread(m->author, 20, 1, f);
-	fread(date, 3, 1, f);
+	hio_read(mod->name, 30, 1, f);
+	hio_seek(f, 20, SEEK_CUR);
+	hio_read(date, 3, 1, f);
 	
 	MODULE_INFO();
-	reportv(ctx, 0, "Creation date  : %02d/%02d/%04d\n", date[0],
+	D_(D_INFO "Creation date: %02d/%02d/%04d", date[0],
 						date[1], 1900 + date[2]);
 	
+	handle = iff_new();
+	if (handle == NULL)
+		return -1;
+
 	/* IFF chunk IDs */
-	iff_register("SEQU", get_sequ);
-	iff_register("PATT", get_patt);
-	iff_register("SMPI", get_smpi);
-	iff_register("SMPD", get_smpd);
-	iff_setflag(IFF_LITTLE_ENDIAN);
+	ret = iff_register(handle, "SEQU", get_sequ);
+	ret |= iff_register(handle, "PATT", get_patt);
+	ret |= iff_register(handle, "SMPI", get_smpi);
+	ret |= iff_register(handle, "SMPD", get_smpd);
+
+	if (ret != 0)
+		return -1;
+
+	iff_set_quirk(handle, IFF_LITTLE_ENDIAN);
 
 	/* Load IFF chunks */
-	while (!feof(f))
-		iff_chunk(ctx, f);
+	if (iff_load(handle, m, f, &data) < 0) {
+		iff_release(handle);
+		return -1;
+	}
 
 	m->volbase = 0xff;
 
-	iff_release();
+	iff_release(handle);
 
 	return 0;
 }

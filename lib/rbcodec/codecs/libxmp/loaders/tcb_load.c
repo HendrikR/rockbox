@@ -1,9 +1,23 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /*
@@ -14,28 +28,23 @@
  * We only support the old format --claudio
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 
 
-static int tcb_test(FILE *, char *, const int);
-static int tcb_load (struct xmp_context *, FILE *, const int);
+static int tcb_test(HIO_HANDLE *, char *, const int);
+static int tcb_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info tcb_loader = {
-	"TCB",
+const struct format_loader tcb_loader = {
 	"TCB Tracker",
 	tcb_test,
 	tcb_load
 };
 
-static int tcb_test(FILE *f, char *t, const int start)
+static int tcb_test(HIO_HANDLE *f, char *t, const int start)
 {
 	uint8 buffer[10];
 
-	if (fread(buffer, 1, 8, f) < 8)
+	if (hio_read(buffer, 1, 8, f) < 8)
 		return -1;
 	if (memcmp(buffer, "AN COOL.", 8) && memcmp(buffer, "AN COOL!", 8))
 		return -1;
@@ -45,11 +54,10 @@ static int tcb_test(FILE *f, char *t, const int start)
 	return 0;
 }
 
-static int tcb_load(struct xmp_context *ctx, FILE *f, const int start)
+static int tcb_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
-	struct xxm_event *event;
+	struct xmp_module *mod = &m->mod;
+	struct xmp_event *event;
 	int i, j, k;
 	uint8 buffer[10];
 	int base_offs, soffs[16];
@@ -57,67 +65,70 @@ static int tcb_load(struct xmp_context *ctx, FILE *f, const int start)
 
 	LOAD_INIT();
 
-	fread(buffer, 8, 1, f);
+	hio_read(buffer, 8, 1, f);
 
-	set_type(m, "%-8.8s (TCB Tracker)", buffer);
+	set_type(m, "TCB Tracker", buffer);
 
-	read16b(f);	/* ? */
-	m->xxh->pat = read16b(f);
-	m->xxh->ins = 16;
-	m->xxh->smp = m->xxh->ins;
-	m->xxh->chn = 4;
-	m->xxh->trk = m->xxh->pat * m->xxh->chn;
-	m->xxh->flg |= XXM_FLG_MODRNG;
+	hio_read16b(f);	/* ? */
+	mod->pat = hio_read16b(f);
+	mod->ins = 16;
+	mod->smp = mod->ins;
+	mod->chn = 4;
+	mod->trk = mod->pat * mod->chn;
 
-	read16b(f);	/* ? */
+	m->quirk |= QUIRK_MODRNG;
+
+	hio_read16b(f);	/* ? */
 
 	for (i = 0; i < 128; i++)
-		m->xxo[i] = read8(f);
+		mod->xxo[i] = hio_read8(f);
 
-	m->xxh->len = read8(f);
-	read8(f);	/* ? */
-	read16b(f);	/* ? */
+	mod->len = hio_read8(f);
+	hio_read8(f);	/* ? */
+	hio_read16b(f);	/* ? */
 
 	MODULE_INFO();
 
-	INSTRUMENT_INIT();
+	if (instrument_init(mod) < 0)
+		return -1;
 
 	/* Read instrument names */
-	for (i = 0; i < m->xxh->ins; i++) {
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
-		fread(buffer, 8, 1, f);
-		copy_adjust(m->xxih[i].name, buffer, 8);
+	for (i = 0; i < mod->ins; i++) {
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
+		hio_read(buffer, 8, 1, f);
+		instrument_name(mod, i, buffer, 8);
 	}
 
-	read16b(f);	/* ? */
+	hio_read16b(f);	/* ? */
 	for (i = 0; i < 5; i++)
-		read16b(f);
+		hio_read16b(f);
 	for (i = 0; i < 5; i++)
-		read16b(f);
+		hio_read16b(f);
 	for (i = 0; i < 5; i++)
-		read16b(f);
+		hio_read16b(f);
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0)
+		return -1;
 
 	/* Read and convert patterns */
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	D_(D_INFO "Stored patterns: %d ", mod->pat);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC(i);
-		m->xxp[i]->rows = 64;
-		TRACK_ALLOC(i);
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_tracks_alloc(mod, i, 64) < 0)
+			return -1;
 
-		for (j = 0; j < m->xxp[i]->rows; j++) {
-			for (k = 0; k < m->xxh->chn; k++) {
+		for (j = 0; j < mod->xxp[i]->rows; j++) {
+			for (k = 0; k < mod->chn; k++) {
 				int b;
 				event = &EVENT (i, k, j);
 
-				b = read8(f);
+				b = hio_read8(f);
 				if (b) {
 					event->note = 12 * (b >> 4);
-					event->note += (b & 0xf) + 24;
+					event->note += (b & 0xf) + 36;
 				}
-				b = read8(f);
+				b = hio_read8(f);
 				event->ins = b >> 4;
 				if (event->ins)
 					event->ins += 1;
@@ -133,63 +144,58 @@ static int tcb_load(struct xmp_context *ctx, FILE *f, const int start)
 				}
 			}
 		}
-		reportv(ctx, 0, ".");
 	}
-	reportv(ctx, 0, "\n");
 
-	base_offs = ftell(f);
-	read32b(f);	/* remaining size */
+	base_offs = hio_tell(f);
+	hio_read32b(f);	/* remaining size */
 
 	/* Read instrument data */
-	reportv(ctx, 1, "     Name      Len  LBeg LEnd L Vol  ?? ?? ??\n");
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		m->xxi[i][0].vol = read8(f) / 2;
-		m->xxi[i][0].pan = 0x80;
-		unk1[i] = read8(f);
-		unk2[i] = read8(f);
-		unk3[i] = read8(f);
+	for (i = 0; i < mod->ins; i++) {
+		mod->xxi[i].sub[0].vol = hio_read8(f) / 2;
+		mod->xxi[i].sub[0].pan = 0x80;
+		unk1[i] = hio_read8(f);
+		unk2[i] = hio_read8(f);
+		unk3[i] = hio_read8(f);
 	}
 
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		soffs[i] = read32b(f);
-		m->xxs[i].len = read32b(f);
+	for (i = 0; i < mod->ins; i++) {
+		soffs[i] = hio_read32b(f);
+		mod->xxs[i].len = hio_read32b(f);
 	}
 
-	read32b(f);
-	read32b(f);
-	read32b(f);
-	read32b(f);
+	hio_read32b(f);
+	hio_read32b(f);
+	hio_read32b(f);
+	hio_read32b(f);
 
-	for (i = 0; i < m->xxh->ins; i++) {
-		m->xxih[i].nsm = !!(m->xxs[i].len);
-		m->xxs[i].lps = 0;
-		m->xxs[i].lpe = 0;
-		m->xxs[i].flg = m->xxs[i].lpe > 0 ? WAVE_LOOPING : 0;
-		m->xxi[i][0].fin = 0;
-		m->xxi[i][0].pan = 0x80;
-		m->xxi[i][0].sid = i;
+	for (i = 0; i < mod->ins; i++) {
+		mod->xxi[i].nsm = !!(mod->xxs[i].len);
+		mod->xxs[i].lps = 0;
+		mod->xxs[i].lpe = 0;
+		mod->xxs[i].flg = mod->xxs[i].lpe > 0 ? XMP_SAMPLE_LOOP : 0;
+		mod->xxi[i].sub[0].fin = 0;
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxi[i].sub[0].sid = i;
 
-		if (V(1) && (strlen((char*)m->xxih[i].name) || (m->xxs[i].len > 1))) {
-			report("[%2X] %-8.8s  %04x %04x %04x %c "
+		D_(D_INFO "[%2X] %-8.8s  %04x %04x %04x %c "
 						"V%02x  %02x %02x %02x\n",
-				i, m->xxih[i].name,
-				m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe,
-				m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-				m->xxi[i][0].vol, unk1[i], unk2[i], unk3[i]);
-		}
+				i, mod->xxi[i].name,
+				mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,
+				mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+				mod->xxi[i].sub[0].vol, unk1[i], unk2[i], unk3[i]);
 	}
 
 	/* Read samples */
-	reportv(ctx, 0, "Stored samples : %d ", m->xxh->smp);
-	for (i = 0; i < m->xxh->ins; i++) {
-		fseek(f, start + base_offs + soffs[i], SEEK_SET);
-		xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate,
-				XMP_SMP_UNS, &m->xxs[m->xxi[i][0].sid], NULL);
-		reportv(ctx, 0, ".");
+
+	D_(D_INFO "Stored samples: %d", mod->smp);
+
+	for (i = 0; i < mod->ins; i++) {
+		hio_seek(f, start + base_offs + soffs[i], SEEK_SET);
+		if (load_sample(m, f, SAMPLE_FLAG_UNS, &mod->xxs[i], NULL) < 0)
+			return -1;
 	}
-	reportv(ctx, 0, "\n");
 
 	return 0;
 }

@@ -1,10 +1,10 @@
-
-#ifndef __XMP_ASIF_H
-#define __XMP_ASIF_H
+#ifndef XMP_ASIF_H
+#define XMP_ASIF_H
 
 #include <stdio.h>
-#include "../lib/rbcodec/codecs/libxmp/include/common.h"
+#include "libxmp/common.h"
+#include "libxmp/hio.h"
 
-int asif_load(struct xmp_context *, FILE *, int);
+int asif_load(struct module_data *, HIO_HANDLE *, int);
 
 #endif

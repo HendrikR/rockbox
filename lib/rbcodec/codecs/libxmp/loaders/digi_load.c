@@ -1,9 +1,23 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /* Based on the DIGI Booster player v1.6 by Tap (Tomasz Piasta), with the
@@ -21,36 +35,31 @@
  * e9x retrace
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 
 
-static int digi_test (FILE *, char *, const int);
-static int digi_load (struct xmp_context *, FILE *, const int);
+static int digi_test (HIO_HANDLE *, char *, const int);
+static int digi_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info digi_loader = {
-    "DIGI",
+const struct format_loader digi_loader = {
     "DIGI Booster",
     digi_test,
     digi_load
 };
 
-static int digi_test(FILE *f, char *t, const int start)
+static int digi_test(HIO_HANDLE *f, char *t, const int start)
 {
     char buf[20];
 
-    if (fread(buf, 1, 20, f) < 20)
+    if (hio_read(buf, 1, 20, f) < 20)
 	return -1;
 
     if (memcmp(buf, "DIGI Booster module", 19))
 	return -1;
 
-    fseek(f, 156, SEEK_CUR);
-    fseek(f, 3 * 4 * 32, SEEK_CUR);
-    fseek(f, 2 * 1 * 32, SEEK_CUR);
+    hio_seek(f, 156, SEEK_CUR);
+    hio_seek(f, 3 * 4 * 32, SEEK_CUR);
+    hio_seek(f, 2 * 1 * 32, SEEK_CUR);
 
     read_title(f, t, 32);
 
@@ -72,17 +81,16 @@ struct digi_header {
     uint32 sloop[31];		/* Sample loop start for 31 samples */
     uint32 sllen[31];		/* Sample loop length for 31 samples */
     uint8 vol[31];		/* Instrument volumes */
-    uint8 fin[31];		/* Finetunes */
+    int8 fin[31];		/* Finetunes */
     uint8 title[32];		/* Song name */
     uint8 insname[31][30];	/* Instrument names */
 };
 
 
-static int digi_load(struct xmp_context *ctx, FILE *f, const int start)
+static int digi_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
-    struct xxm_event *event = 0;
+    struct xmp_module *mod = &m->mod;
+    struct xmp_event *event = 0;
     struct digi_header dh;
     uint8 digi_event[4], chn_table[64];
     uint16 w;
@@ -90,100 +98,108 @@ static int digi_load(struct xmp_context *ctx, FILE *f, const int start)
 
     LOAD_INIT();
 
-    fread(&dh.id, 20, 1, f);
+    hio_read(&dh.id, 20, 1, f);
 
-    fread(&dh.vstr, 4, 1, f);
-    dh.ver = read8(f);
-    dh.chn = read8(f);
-    dh.pack = read8(f);
-    fread(&dh.unknown, 19, 1, f);
-    dh.pat = read8(f);
-    dh.len = read8(f);
-    fread(&dh.ord, 128, 1, f);
+    hio_read(&dh.vstr, 4, 1, f);
+    dh.ver = hio_read8(f);
+    dh.chn = hio_read8(f);
+    dh.pack = hio_read8(f);
+    hio_read(&dh.unknown, 19, 1, f);
+    dh.pat = hio_read8(f);
+    dh.len = hio_read8(f);
 
-    for (i = 0; i < 31; i++)
-	dh.slen[i] = read32b(f);
-    for (i = 0; i < 31; i++)
-	dh.sloop[i] = read32b(f);
-    for (i = 0; i < 31; i++)
-	dh.sllen[i] = read32b(f);
-    for (i = 0; i < 31; i++)
-	dh.vol[i] = read8(f);
-    for (i = 0; i < 31; i++)
-	dh.fin[i] = read8(f);
+    /* Sanity check */
+    if (dh.len > 127) {
+        return -1;
+    }
 
-    fread(&dh.title, 32, 1, f);
+    hio_read(&dh.ord, 128, 1, f);
 
     for (i = 0; i < 31; i++)
-        fread(&dh.insname[i], 30, 1, f);
+	dh.slen[i] = hio_read32b(f);
+    for (i = 0; i < 31; i++)
+	dh.sloop[i] = hio_read32b(f);
+    for (i = 0; i < 31; i++)
+	dh.sllen[i] = hio_read32b(f);
+    for (i = 0; i < 31; i++)
+	dh.vol[i] = hio_read8(f);
+    for (i = 0; i < 31; i++)
+	dh.fin[i] = hio_read8s(f);
 
-    m->xxh->ins = 31;
-    m->xxh->smp = m->xxh->ins;
-    m->xxh->pat = dh.pat + 1;
-    m->xxh->chn = dh.chn;
-    m->xxh->trk = m->xxh->pat * m->xxh->chn;
-    m->xxh->len = dh.len + 1;
-    m->xxh->flg |= XXM_FLG_MODRNG;
+    hio_read(&dh.title, 32, 1, f);
 
-    copy_adjust((uint8 *)m->name, dh.title, 32);
-    set_type(m, "DIGI (DIGI Booster %-4.4s)", dh.vstr);
+    for (i = 0; i < 31; i++)
+        hio_read(&dh.insname[i], 30, 1, f);
+
+    mod->ins = 31;
+    mod->smp = mod->ins;
+    mod->pat = dh.pat + 1;
+    mod->chn = dh.chn;
+    mod->trk = mod->pat * mod->chn;
+    mod->len = dh.len + 1;
+
+    m->quirk |= QUIRK_MODRNG;
+
+    copy_adjust(mod->name, dh.title, 32);
+    set_type(m, "DIGI Booster %-4.4s", dh.vstr);
 
     MODULE_INFO();
  
-    for (i = 0; i < m->xxh->len; i++)
-	m->xxo[i] = dh.ord[i];
+    for (i = 0; i < mod->len; i++)
+	mod->xxo[i] = dh.ord[i];
  
-    INSTRUMENT_INIT();
+    if (instrument_init(mod) < 0)
+	return -1;
 
     /* Read and convert instruments and samples */
 
-    if (V(1))
-	report ("     Sample name                    Len  LBeg LEnd L Vol\n");
+    for (i = 0; i < mod->ins; i++) {
+	if (subinstrument_alloc(mod, i, 1) < 0)
+	    return -1;
 
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
-	m->xxih[i].nsm = !!(m->xxs[i].len = dh.slen[i]);
-	m->xxs[i].lps = dh.sloop[i];
-	m->xxs[i].lpe = dh.sloop[i] + dh.sllen[i];
-	m->xxs[i].flg = m->xxs[i].lpe > 0 ? WAVE_LOOPING : 0;
-	m->xxi[i][0].vol = dh.vol[i];
-	m->xxi[i][0].fin = dh.fin[i];
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].sid = i;
+	mod->xxs[i].len = dh.slen[i];
+	mod->xxs[i].lps = dh.sloop[i];
+	mod->xxs[i].lpe = dh.sloop[i] + dh.sllen[i];
+	mod->xxs[i].flg = mod->xxs[i].lpe > 0 ? XMP_SAMPLE_LOOP : 0;
+	mod->xxi[i].sub[0].vol = dh.vol[i];
+	mod->xxi[i].sub[0].fin = dh.fin[i];
+	mod->xxi[i].sub[0].pan = 0x80;
+	mod->xxi[i].sub[0].sid = i;
 
-	copy_adjust(m->xxih[i].name, dh.insname[i], 30);
+	if (mod->xxs[i].len > 0)
+	    mod->xxi[i].nsm = 1;
 
-	if (V(1) && (strlen((char *)m->xxih[i].name) || (m->xxs[i].len > 1))) {
-	    report ("[%2X] %-30.30s %04x %04x %04x %c V%02x\n", i,
-		m->xxih[i].name, m->xxs[i].len, m->xxs[i].lps, m->xxs[i].lpe, m->xxs[i].flg
-		& WAVE_LOOPING ? 'L' : ' ', m->xxi[i][0].vol);
-	}
+	instrument_name(mod, i, dh.insname[i], 30);
+
+	D_(D_INFO "[%2X] %-30.30s %04x %04x %04x %c V%02x", i,
+		mod->xxi[i].name, mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,
+		mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ', mod->xxi[i].sub[0].vol);
     }
 
-    PATTERN_INIT();
+    if (pattern_init(mod) < 0)
+	return -1;
 
     /* Read and convert patterns */
-    reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+    D_(D_INFO "Stored patterns: %d", mod->pat);
 
-    for (i = 0; i < m->xxh->pat; i++) {
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	TRACK_ALLOC (i);
+    for (i = 0; i < mod->pat; i++) {
+	if (pattern_tracks_alloc(mod, i, 64) < 0)
+	    return -1;
 
 	if (dh.pack) {
-	    w = (read16b(f) - 64) >> 2;
-	    fread (chn_table, 1, 64, f);
+	    w = (hio_read16b(f) - 64) >> 2;
+	    hio_read (chn_table, 1, 64, f);
 	} else {
-	    w = 64 * m->xxh->chn;
+	    w = 64 * mod->chn;
 	    memset (chn_table, 0xff, 64);
 	}
 
 	for (j = 0; j < 64; j++) {
-	    for (c = 0, k = 0x80; c < m->xxh->chn; c++, k >>= 1) {
+	    for (c = 0, k = 0x80; c < mod->chn; c++, k >>= 1) {
 	        if (chn_table[j] & k) {
-		    fread (digi_event, 4, 1, f);
+		    hio_read (digi_event, 4, 1, f);
 		    event = &EVENT (i, c, j);
-	            cvt_pt_event (event, digi_event);
+	            decode_protracker_event(event, digi_event);
 		    switch (event->fxt) {
 		    case 0x08:		/* Robot */
 			event->fxt = event->fxp = 0;
@@ -207,23 +223,17 @@ static int digi_load(struct xmp_context *ctx, FILE *f, const int start)
 	    }
 	}
 
-	if (w)
-	    report ("WARNING! Corrupted file (w = %d)", w);
-
-	reportv(ctx, 0, ".");
+	if (w) {
+	    D_(D_CRIT "Corrupted file (w = %d)", w);
+	}
     }
-    reportv(ctx, 0, "\n");
 
     /* Read samples */
-    reportv(ctx, 0, "Stored samples : %d ", m->xxh->smp);
-    for (i = 0; i < m->xxh->ins; i++) {
-	xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate, 0,
-	    &m->xxs[m->xxi[i][0].sid], NULL);
-	reportv(ctx, 0, ".");
+    D_(D_INFO "Stored samples: %d", mod->smp);
+    for (i = 0; i < mod->ins; i++) {
+	if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+	    return -1;
     }
-    reportv(ctx, 0, "\n");
-
-    /* m->fetch |= 0; */
 
     return 0;
 }

@@ -1,207 +1,230 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdio.h>
-#include "load.h"
-#include "iff.h"
+#include "libxmp/loaders/loader.h"
+#include "libxmp/loaders/iff.h"
 
 #define MAGIC_FORM	MAGIC4('F','O','R','M')
 #define MAGIC_EMOD	MAGIC4('E','M','O','D')
+#define MAGIC_EMIC	MAGIC4('E','M','I','C')
 
+static int emod_test(HIO_HANDLE *, char *, const int);
+static int emod_load(struct module_data *, HIO_HANDLE *, const int);
 
-static int emod_test (FILE *, char *, const int);
-static int emod_load (struct xmp_context *, FILE *, const int);
-
-struct xmp_loader_info emod_loader = {
-    "EMOD",
-    "Quadra Composer",
-    emod_test,
-    emod_load
+const struct format_loader emod_loader = {
+	"Quadra Composer",
+	emod_test,
+	emod_load
 };
 
-static int emod_test(FILE *f, char *t, const int start)
+static int emod_test(HIO_HANDLE * f, char *t, const int start)
 {
-    if (read32b(f) != MAGIC_FORM)
-	return -1;
+	if (hio_read32b(f) != MAGIC_FORM)
+		return -1;
 
-    read32b(f);
+	hio_read32b(f);
 
-    if (read32b(f) != MAGIC_EMOD)
-	return -1;
+	if (hio_read32b(f) != MAGIC_EMOD)
+		return -1;
 
-    read_title(f, t, 0);
-
-    return 0;
-}
-
-
-static uint8 *reorder;
-
-
-static void get_emic(struct xmp_context *ctx, int size, FILE *f)
-{
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
-    int i, ver;
-
-    ver = read16b(f);
-    fread(m->name, 1, 20, f);
-    fread(m->author, 1, 20, f);
-    m->xxh->bpm = read8(f);
-    m->xxh->ins = read8(f);
-    m->xxh->smp = m->xxh->ins;
-
-    m->xxh->flg |= XXM_FLG_MODRNG;
-
-    snprintf(m->type, XMP_NAMESIZE, "EMOD v%d (Quadra Composer)", ver);
-    MODULE_INFO();
-
-    INSTRUMENT_INIT();
-
-    reportv(ctx, 1, "     Instrument name      Len  LBeg LEnd L Vol Fin\n");
-
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc(sizeof (struct xxm_instrument), 1);
-
-	read8(f);		/* num */
-	m->xxi[i][0].vol = read8(f);
-	m->xxs[i].len = 2 * read16b(f);
-	fread(m->xxih[i].name, 1, 20, f);
-	m->xxs[i].flg = read8(f) & 1 ? WAVE_LOOPING : 0;
-	m->xxi[i][0].fin = read8(f);
-	m->xxs[i].lps = 2 * read16b(f);
-	m->xxs[i].lpe = m->xxs[i].lps + 2 * read16b(f);
-	read32b(f);		/* ptr */
-
-	m->xxih[i].nsm = 1;
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].sid = i;
-
-	if (V(1) && (strlen((char *)m->xxih[i].name) || (m->xxs[i].len > 2))) {
-	    report ("[%2X] %-20.20s %05x %05x %05x %c V%02x %+d\n",
-			i, m->xxih[i].name, m->xxs[i].len, m->xxs[i].lps,
-			m->xxs[i].lpe, m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-			m->xxi[i][0].vol, m->xxi[i][0].fin >> 4);
+	if (hio_read32b(f) == MAGIC_EMIC) {
+		hio_read32b(f);	/* skip size */
+		hio_read16b(f);	/* skip version */
+		read_title(f, t, 20);
+	} else {
+		read_title(f, t, 0);
 	}
-    }
 
-    read8(f);			/* pad */
-    m->xxh->pat = read8(f);
-
-    m->xxh->trk = m->xxh->pat * m->xxh->chn;
-
-    PATTERN_INIT();
-
-    reorder = calloc(1, 256);
-
-    for (i = 0; i < m->xxh->pat; i++) {
-	reorder[read8(f)] = i;
-	PATTERN_ALLOC(i);
-	m->xxp[i]->rows = read8(f) + 1;
-	TRACK_ALLOC(i);
-	fseek(f, 20, SEEK_CUR);		/* skip name */
-	read32b(f);			/* ptr */
-    }
-
-    m->xxh->len = read8(f);
-
-    reportv(ctx, 0, "Module length  : %d\n", m->xxh->len);
-
-    for (i = 0; i < m->xxh->len; i++)
-	m->xxo[i] = reorder[read8(f)];
+	return 0;
 }
 
-
-static void get_patt(struct xmp_context *ctx, int size, FILE *f)
+static int get_emic(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
-    int i, j, k;
-    struct xxm_event *event;
-    uint8 x;
+	struct xmp_module *mod = &m->mod;
+	int i, ver;
+	uint8 reorder[256];
 
-    reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	ver = hio_read16b(f);
+	hio_read(mod->name, 1, 20, f);
+	hio_seek(f, 20, SEEK_CUR);
+	mod->bpm = hio_read8(f);
+	mod->ins = hio_read8(f);
+	mod->smp = mod->ins;
 
-    for (i = 0; i < m->xxh->pat; i++) {
-	for (j = 0; j < m->xxp[i]->rows; j++) {
-	    for (k = 0; k < m->xxh->chn; k++) {
-		event = &EVENT(i, k, j);
-		event->ins = read8(f);
-		event->note = read8(f) + 1;
-		if (event->note != 0)
-		    event->note += 36;
-		event->fxt = read8(f) & 0x0f;
-		event->fxp = read8(f);
+	m->quirk |= QUIRK_MODRNG;
 
-		/* Fix effects */
-		switch (event->fxt) {
-		case 0x04:
-		    x = event->fxp;
-		    event->fxp = (x & 0xf0) | ((x << 1) & 0x0f);
-		    break;
-		case 0x09:
-		    event->fxt <<= 1;
-		    break;
-		case 0x0b:
-		    x = event->fxt;
-		    event->fxt = 16 * (x / 10) + x % 10;
-		    break;
+	snprintf(mod->type, XMP_NAME_SIZE, "Quadra Composer EMOD v%d", ver);
+	MODULE_INFO();
+
+	if (instrument_init(mod) < 0)
+		return -1;
+
+	for (i = 0; i < mod->ins; i++) {
+		struct xmp_instrument *xxi = &mod->xxi[i];
+		struct xmp_sample *xxs = &mod->xxs[i];
+		struct xmp_subinstrument *sub;
+
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
+
+		sub = &xxi->sub[0];
+
+		hio_read8(f);	/* num */
+		sub->vol = hio_read8(f);
+		xxs->len = 2 * hio_read16b(f);
+		hio_read(xxi->name, 1, 20, f);
+		xxs->flg = hio_read8(f) & 1 ? XMP_SAMPLE_LOOP : 0;
+		sub->fin = hio_read8s(f) << 4;
+		xxs->lps = 2 * hio_read16b(f);
+		xxs->lpe = xxs->lps + 2 * hio_read16b(f);
+		hio_read32b(f);	/* ptr */
+
+		xxi->nsm = 1;
+		sub->pan = 0x80;
+		sub->sid = i;
+
+		D_(D_INFO "[%2X] %-20.20s %05x %05x %05x %c V%02x %+d",
+			i, xxi->name, xxs->len, xxs->lps, xxs->lpe,
+			xxs->flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+			sub->vol, sub->fin >> 4);
+	}
+
+	hio_read8(f);		/* pad */
+	mod->pat = hio_read8(f);
+	mod->trk = mod->pat * mod->chn;
+
+	if (pattern_init(mod) < 0)
+		return -1;
+
+	memset(reorder, 0, 256);
+
+	for (i = 0; i < mod->pat; i++) {
+		reorder[hio_read8(f)] = i;
+
+		if (pattern_tracks_alloc(mod, i, hio_read8(f) + 1) < 0)
+			return -1;
+
+		hio_seek(f, 20, SEEK_CUR);	/* skip name */
+		hio_read32b(f);	/* ptr */
+	}
+
+	mod->len = hio_read8(f);
+
+	D_(D_INFO "Module length: %d", mod->len);
+
+	for (i = 0; i < mod->len; i++)
+		mod->xxo[i] = reorder[hio_read8(f)];
+
+	return 0;
+}
+
+static int get_patt(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
+{
+	struct xmp_module *mod = &m->mod;
+	struct xmp_event *event;
+	int i, j, k;
+	uint8 x;
+
+	D_(D_INFO "Stored patterns: %d", mod->pat);
+
+	for (i = 0; i < mod->pat; i++) {
+		for (j = 0; j < mod->xxp[i]->rows; j++) {
+			for (k = 0; k < mod->chn; k++) {
+				event = &EVENT(i, k, j);
+				event->ins = hio_read8(f);
+				event->note = hio_read8(f) + 1;
+				if (event->note != 0)
+					event->note += 48;
+				event->fxt = hio_read8(f) & 0x0f;
+				event->fxp = hio_read8(f);
+
+				/* Fix effects */
+				switch (event->fxt) {
+				case 0x04:
+					x = event->fxp;
+					event->fxp =
+					    (x & 0xf0) | ((x << 1) & 0x0f);
+					break;
+				case 0x09:
+					event->fxt <<= 1;
+					break;
+				case 0x0b:
+					x = event->fxt;
+					event->fxt = 16 * (x / 10) + x % 10;
+					break;
+				}
+			}
 		}
-	    }
 	}
-	reportv(ctx, 0, ".");
-    }
-    reportv(ctx, 0, "\n");
+
+	return 0;
 }
 
-
-static void get_8smp(struct xmp_context *ctx, int size, FILE *f)
+static int get_8smp(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
-    int i;
+	struct xmp_module *mod = &m->mod;
+	int i;
 
-    reportv(ctx, 0, "Stored samples : %d ", m->xxh->smp);
+	D_(D_INFO "Stored samples : %d ", mod->smp);
 
-    for (i = 0; i < m->xxh->smp; i++) {
-	xmp_drv_loadpatch(ctx, f, i, m->c4rate, 0, &m->xxs[i], NULL);
-	reportv(ctx, 0, ".");
-    }
-    reportv(ctx, 0, "\n");
+	for (i = 0; i < mod->smp; i++) {
+		if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
-
-static int emod_load(struct xmp_context *ctx, FILE *f, const int start)
+static int emod_load(struct module_data *m, HIO_HANDLE * f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
+	iff_handle handle;
+	int ret;
 
-    LOAD_INIT();
+	LOAD_INIT();
 
-    read32b(f);		/* FORM */
-    read32b(f);
-    read32b(f);		/* EMOD */
+	hio_read32b(f);		/* FORM */
+	hio_read32b(f);
+	hio_read32b(f);		/* EMOD */
 
-    /* IFF chunk IDs */
-    iff_register("EMIC", get_emic);
-    iff_register("PATT", get_patt);
-    iff_register("8SMP", get_8smp);
+	handle = iff_new();
+	if (handle == NULL)
+		return -1;
 
-    /* Load IFF chunks */
-    while (!feof(f))
-	iff_chunk(ctx, f);
+	/* IFF chunk IDs */
+	ret = iff_register(handle, "EMIC", get_emic);
+	ret |= iff_register(handle, "PATT", get_patt);
+	ret |= iff_register(handle, "8SMP", get_8smp);
 
-    iff_release();
-    free(reorder);
+	if (ret != 0)
+		return -1;
 
-    return 0;
+	/* Load IFF chunks */
+	if (iff_load(handle, m, f, NULL) < 0) {
+		iff_release(handle);
+		return -1;
+	}
+
+	iff_release(handle);
+
+	return 0;
 }

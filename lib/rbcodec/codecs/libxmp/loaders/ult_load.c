@@ -1,9 +1,23 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /* Based on the format description by FreeJack of The Elven Nation
@@ -15,29 +29,24 @@
  * - MAS_UTrack_V004: Ultra Tracker version 1.6
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "../lib/rbcodec/codecs/libxmp/include/period.h"
-#include "load.h"
+#include "libxmp/period.h"
+#include "libxmp/loaders/loader.h"
 
 
-static int ult_test (FILE *, char *, const int);
-static int ult_load (struct xmp_context *, FILE *, const int);
+static int ult_test (HIO_HANDLE *, char *, const int);
+static int ult_load (struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info ult_loader = {
-    "ULT",
+const struct format_loader ult_loader = {
     "Ultra Tracker",
     ult_test,
     ult_load
 };
 
-static int ult_test(FILE *f, char *t, const int start)
+static int ult_test(HIO_HANDLE *f, char *t, const int start)
 {
     char buf[15];
 
-    if (fread(buf, 1, 15, f) < 15)
+    if (hio_read(buf, 1, 15, f) < 15)
 	return -1;
 
     if (memcmp(buf, "MAS_UTrack_V000", 14))
@@ -88,72 +97,72 @@ struct ult_event {
 };
 
 
-static char *verstr[4] = {
-    "< 1.4", "1.4", "1.5", "1.6"
-};
-
-
-static int ult_load(struct xmp_context *ctx, FILE *f, const int start)
+static int ult_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-    struct xmp_player_context *p = &ctx->p;
-    struct xmp_mod_context *m = &p->m;
+    struct xmp_module *mod = &m->mod;
     int i, j, k, ver, cnt;
-    struct xxm_event *event;
+    struct xmp_event *event;
     struct ult_header ufh;
     struct ult_header2 ufh2;
     struct ult_instrument uih;
     struct ult_event ue;
+    char *verstr[4] = { "< 1.4", "1.4", "1.5", "1.6" };
+
     int keep_porta1 = 0, keep_porta2 = 0;
     uint8 x8;
 
     LOAD_INIT();
 
-    fread(&ufh.magic, 15, 1, f);
-    fread(&ufh.name, 32, 1, f);
-    ufh.msgsize = read8(f);
+    hio_read(&ufh.magic, 15, 1, f);
+    hio_read(&ufh.name, 32, 1, f);
+    ufh.msgsize = hio_read8(f);
 
     ver = ufh.magic[14] - '0';
 
-    strncpy(m->name, (char *)ufh.name, 32);
+    strncpy(mod->name, (char *)ufh.name, 32);
     ufh.name[0] = 0;
-    set_type(m, "ULT V%04d (Ultra Tracker %s)", ver, verstr[ver - 1]);
+    set_type(m, "Ultra Tracker %s ULT V%04d", verstr[ver - 1], ver);
 
     MODULE_INFO();
 
-    fseek(f, ufh.msgsize * 32, SEEK_CUR);
+    hio_seek(f, ufh.msgsize * 32, SEEK_CUR);
 
-    m->xxh->ins = m->xxh->smp = read8(f);
-    /* m->xxh->flg |= XXM_FLG_LINEAR; */
+    mod->ins = mod->smp = hio_read8(f);
+    /* mod->flg |= XXM_FLG_LINEAR; */
 
     /* Read and convert instruments */
 
-    INSTRUMENT_INIT();
+    if (instrument_init(mod) < 0)
+	return -1;
 
-    reportv(ctx, 1, "Instruments    : %d ", m->xxh->ins);
+    D_(D_INFO "Instruments: %d", mod->ins);
 
-    for (i = 0; i < m->xxh->ins; i++) {
-	m->xxi[i] = calloc (sizeof (struct xxm_instrument), 1);
+    for (i = 0; i < mod->ins; i++) {
+	if (subinstrument_alloc(mod, i, 1) < 0)
+	    return -1;
 
-	fread(&uih.name, 32, 1, f);
-	fread(&uih.dosname, 12, 1, f);
-	uih.loop_start = read32l(f);
-	uih.loopend = read32l(f);
-	uih.sizestart = read32l(f);
-	uih.sizeend = read32l(f);
-	uih.volume = read8(f);
-	uih.bidiloop = read8(f);
-	uih.finetune = read16l(f);
-	uih.c2spd = ver < 4 ? 0 : read16l(f);
+	hio_read(&uih.name, 32, 1, f);
+	hio_read(&uih.dosname, 12, 1, f);
+	uih.loop_start = hio_read32l(f);
+	uih.loopend = hio_read32l(f);
+	uih.sizestart = hio_read32l(f);
+	uih.sizeend = hio_read32l(f);
+	uih.volume = hio_read8(f);
+	uih.bidiloop = hio_read8(f);
+	uih.finetune = hio_read16l(f);
+	uih.c2spd = ver < 4 ? 0 : hio_read16l(f);
 
 	if (ver > 3) {			/* Incorrect in ult_form.txt */
 	    uih.c2spd ^= uih.finetune;
 	    uih.finetune ^= uih.c2spd;
 	    uih.c2spd ^= uih.finetune;
 	}
-	m->xxs[i].len = uih.sizeend - uih.sizestart;
-	m->xxih[i].nsm = !!m->xxs[i].len;
-	m->xxs[i].lps = uih.loop_start;
-	m->xxs[i].lpe = uih.loopend;
+	mod->xxs[i].len = uih.sizeend - uih.sizestart;
+	mod->xxs[i].lps = uih.loop_start;
+	mod->xxs[i].lpe = uih.loopend;
+
+	if (mod->xxs[i].len > 0)
+	    mod->xxi[i].nsm = 1;
 
 	/* BiDi Loop : (Bidirectional Loop)
 	 *
@@ -176,99 +185,96 @@ static int ult_load(struct xmp_context *ctx, FILE *f, const int start)
 	switch (uih.bidiloop) {
 	case 20:		/* Type 20 is in seasons.ult */
 	case 4:
-	    m->xxs[i].flg = WAVE_16_BITS;
-	    m->xxs[i].len <<= 1;
+	    mod->xxs[i].flg = XMP_SAMPLE_16BIT;
 	    break;
 	case 8:
-	case 24:
-	    m->xxs[i].flg = WAVE_LOOPING;
+	    mod->xxs[i].flg = XMP_SAMPLE_LOOP;
 	    break;
 	case 12:
+	    mod->xxs[i].flg = XMP_SAMPLE_16BIT | XMP_SAMPLE_LOOP;
+	    break;
+	case 24:
+	    mod->xxs[i].flg = XMP_SAMPLE_LOOP | XMP_SAMPLE_LOOP_REVERSE;
+	    break;
 	case 28:
-	    m->xxs[i].flg = WAVE_16_BITS | WAVE_LOOPING;
-	    m->xxs[i].len <<= 1;
+	    mod->xxs[i].flg = XMP_SAMPLE_16BIT | XMP_SAMPLE_LOOP | XMP_SAMPLE_LOOP_REVERSE;
 	    break;
 	}
 
 /* TODO: Add logarithmic volume support */
-	m->xxi[i][0].vol = uih.volume;
-	m->xxi[i][0].pan = 0x80;
-	m->xxi[i][0].sid = i;
+	mod->xxi[i].sub[0].vol = uih.volume;
+	mod->xxi[i].sub[0].pan = 0x80;
+	mod->xxi[i].sub[0].sid = i;
 
-	copy_adjust(m->xxih[i].name, uih.name, 24);
+	instrument_name(mod, i, uih.name, 24);
 
-	if ((V(1)) && (strlen((char *) uih.name) || m->xxs[i].len)) {
-	    report ("\n[%2X] %-32.32s %05x%c%05x %05x %c V%02x F%04x %5d",
-		i, uih.name, m->xxs[i].len,
-		m->xxs[i].flg & WAVE_16_BITS ? '+' : ' ',
-		m->xxs[i].lps, m->xxs[i].lpe,
-		m->xxs[i].flg & WAVE_LOOPING ? 'L' : ' ',
-		m->xxi[i][0].vol, uih.finetune, uih.c2spd);
-	}
+	D_(D_INFO "[%2X] %-32.32s %05x%c%05x %05x %c V%02x F%04x %5d",
+		i, uih.name, mod->xxs[i].len,
+		mod->xxs[i].flg & XMP_SAMPLE_16BIT ? '+' : ' ',
+		mod->xxs[i].lps, mod->xxs[i].lpe,
+		mod->xxs[i].flg & XMP_SAMPLE_LOOP ? 'L' : ' ',
+		mod->xxi[i].sub[0].vol, uih.finetune, uih.c2spd);
 
 	if (ver > 3)
-	    c2spd_to_note(uih.c2spd, &m->xxi[i][0].xpo, &m->xxi[i][0].fin);
+	    c2spd_to_note(uih.c2spd, &mod->xxi[i].sub[0].xpo, &mod->xxi[i].sub[0].fin);
     }
 
-    reportv(ctx, 1, "\n");
-
-    fread(&ufh2.order, 256, 1, f);
-    ufh2.channels = read8(f);
-    ufh2.patterns = read8(f);
+    hio_read(&ufh2.order, 256, 1, f);
+    ufh2.channels = hio_read8(f);
+    ufh2.patterns = hio_read8(f);
 
     for (i = 0; i < 256; i++) {
 	if (ufh2.order[i] == 0xff)
 	    break;
-	m->xxo[i] = ufh2.order[i];
+	mod->xxo[i] = ufh2.order[i];
     }
-    m->xxh->len = i;
-    m->xxh->chn = ufh2.channels + 1;
-    m->xxh->pat = ufh2.patterns + 1;
-    m->xxh->tpo = 6;
-    m->xxh->bpm = 125;
-    m->xxh->trk = m->xxh->chn * m->xxh->pat;
+    mod->len = i;
+    mod->chn = ufh2.channels + 1;
+    mod->pat = ufh2.patterns + 1;
+    mod->spd = 6;
+    mod->bpm = 125;
+    mod->trk = mod->chn * mod->pat;
 
-    for (i = 0; i < m->xxh->chn; i++) {
+    for (i = 0; i < mod->chn; i++) {
 	if (ver >= 3) {
-	    x8 = read8(f);
-	    m->xxc[i].pan = 255 * x8 / 15;
+	    x8 = hio_read8(f);
+	    mod->xxc[i].pan = 255 * x8 / 15;
 	} else {
-	    m->xxc[i].pan = (((i + 1) / 2) % 2) * 0xff;	/* ??? */
+	    mod->xxc[i].pan = DEFPAN((((i + 1) / 2) % 2) * 0xff); /* ??? */
 	}
     }
 
-    PATTERN_INIT();
+    if (pattern_init(mod) < 0)
+	return -1;
 
     /* Read and convert patterns */
 
-    if (V(0))
-	report ("Stored patterns: %d ", m->xxh->pat);
+    D_(D_INFO "Stored patterns: %d", mod->pat);
 
     /* Events are stored by channel */
-    for (i = 0; i < m->xxh->pat; i++) {
-	PATTERN_ALLOC (i);
-	m->xxp[i]->rows = 64;
-	TRACK_ALLOC (i);
+    for (i = 0; i < mod->pat; i++) {
+	if (pattern_tracks_alloc(mod, i, 64) < 0)
+	    return -1;
     }
 
-    for (i = 0; i < m->xxh->chn; i++) {
-	for (j = 0; j < 64 * m->xxh->pat; ) {
+    for (i = 0; i < mod->chn; i++) {
+	for (j = 0; j < 64 * mod->pat; ) {
 	    cnt = 1;
-	    x8 = read8(f);		/* Read note or repeat code (0xfc) */
+	    x8 = hio_read8(f);		/* Read note or repeat code (0xfc) */
 	    if (x8 == 0xfc) {
-		cnt = read8(f);			/* Read repeat count */
-		x8 = read8(f);			/* Read note */
+		cnt = hio_read8(f);		/* Read repeat count */
+		x8 = hio_read8(f);		/* Read note */
 	    }
-	    fread(&ue, 4, 1, f);		/* Read rest of the event */
+	    hio_read(&ue, 4, 1, f);		/* Read rest of the event */
 
 	    if (cnt == 0)
 		cnt++;
 
 	    for (k = 0; k < cnt; k++, j++) {
 		event = &EVENT (j >> 6, i , j & 0x3f);
-		memset(event, 0, sizeof (struct xxm_event));
+		memset(event, 0, sizeof (struct xmp_event));
 		if (x8)
-		    event->note = x8 + 24;
+		    event->note = x8 + 36;
 		event->ins = ue.ins;
 		event->fxt = MSN (ue.fxt);
 		event->f2t = LSN (ue.fxt);
@@ -328,20 +334,17 @@ static int ult_load(struct xmp_context *ctx, FILE *f, const int start)
 		}
 
 	    }
-	    if (V(0) && (j % (64 * m->xxh->chn) == 0))
-		report (".");
 	}
     }
 
-    reportv(ctx, 0, "\nStored samples : %d ", m->xxh->smp);
+    D_(D_INFO "Stored samples: %d", mod->smp);
 
-    for (i = 0; i < m->xxh->ins; i++) {
-	if (!m->xxs[i].len)
+    for (i = 0; i < mod->ins; i++) {
+	if (!mod->xxs[i].len)
 	    continue;
-	xmp_drv_loadpatch(ctx, f, i, m->c4rate, 0, &m->xxs[i], NULL);
-	reportv(ctx, 0, ".");
+	if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+	    return -1;
     }
-    reportv(ctx, 0, "\n");
 
     m->volbase = 0x100;
 

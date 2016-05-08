@@ -1,9 +1,23 @@
 /* Extended Module Player
- * Copyright (C) 1996-2012 Claudio Matsuoka and Hipolito Carraro Jr
+ * Copyright (C) 1996-2016 Claudio Matsuoka and Hipolito Carraro Jr
  *
- * This file is part of the Extended Module Player and is distributed
- * under the terms of the GNU General Public License. See doc/COPYING
- * for more information.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 /* Loader for Slamtilt modules based on the format description
@@ -13,27 +27,25 @@
 
 /* Tested with the Slamtilt modules sent by Sipos Attila */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "load.h"
+#include "libxmp/loaders/loader.h"
 
 #define MAGIC_STIM	MAGIC4('S','T','I','M')
 
-static int stim_test(FILE *, char *, const int);
-static int stim_load(struct xmp_context *, FILE *, const int);
+static int stim_test(HIO_HANDLE *, char *, const int);
+static int stim_load(struct module_data *, HIO_HANDLE *, const int);
 
-struct xmp_loader_info stim_loader = {
-	"STIM",
+const struct format_loader stim_loader = {
 	"Slamtilt",
 	stim_test,
 	stim_load
 };
 
-static int stim_test(FILE *f, char *t, const int start)
+static int stim_test(HIO_HANDLE *f, char *t, const int start)
 {
-	if (read32b(f) != MAGIC_STIM)
+	if (hio_read32b(f) != MAGIC_STIM)
+		return -1;
+
+	if (hio_read16b(f) > 16)
 		return -1;
 
 	read_title(f, t, 0);
@@ -60,58 +72,67 @@ struct stim_header {
 	uint32 pataddr[64];	/* Pattern addresses (add 0xc) */
 };
 
-static int stim_load(struct xmp_context *ctx, FILE * f, const int start)
+static int stim_load(struct module_data *m, HIO_HANDLE *f, const int start)
 {
-	struct xmp_player_context *p = &ctx->p;
-	struct xmp_mod_context *m = &p->m;
+	struct xmp_module *mod = &m->mod;
 	int i, j, k;
-	struct xxm_event *event;
+	struct xmp_event *event;
 	struct stim_header sh;
 	struct stim_instrument si;
 	uint8 b1, b2, b3;
 
 	LOAD_INIT();
 
-	sh.id = read32b(f);
-	sh.smpaddr = read32b(f);
-	read32b(f);
-	read32b(f);
-	sh.nos = read16b(f);
-	sh.len = read16b(f);
-	sh.pat = read16b(f);
-	fread(&sh.order, 128, 1, f);
-	for (i = 0; i < 64; i++)
-		sh.pataddr[i] = read32b(f) + 0x0c;
+	sh.id = hio_read32b(f);
+	sh.smpaddr = hio_read32b(f);
+	hio_read32b(f);
+	hio_read32b(f);
+	sh.nos = hio_read16b(f);
+	sh.len = hio_read16b(f);
+	sh.pat = hio_read16b(f);
+	hio_read(&sh.order, 128, 1, f);
 
-	m->xxh->len = sh.len;
-	m->xxh->pat = sh.pat;
-	m->xxh->ins = sh.nos;
-	m->xxh->smp = m->xxh->ins;
-	m->xxh->trk = m->xxh->pat * m->xxh->chn;
+	/* Sanity check */
+	if (sh.nos > 31 || sh.len > 128 || sh.pat > 64) {
+		return -1;
+	}
 
-	for (i = 0; i < m->xxh->len; i++)
-		m->xxo[i] = sh.order[i];
+	for (i = 0; i < 64; i++) {
+		sh.pataddr[i] = hio_read32b(f) + 0x0c;
+		if (sh.pataddr[i] > 0x00100000)
+			return -1;
+	}
 
-	set_type(m, "STIM (Slamtilt)");
+	mod->chn = 4;
+	mod->len = sh.len;
+	mod->pat = sh.pat;
+	mod->ins = sh.nos;
+	mod->smp = mod->ins;
+	mod->trk = mod->pat * mod->chn;
+
+	for (i = 0; i < mod->len; i++)
+		mod->xxo[i] = sh.order[i];
+
+	set_type(m, "Slamtilt");
 
 	MODULE_INFO();
 
-	PATTERN_INIT();
+	if (pattern_init(mod) < 0)
+		return -1;
 
 	/* Load and convert patterns */
-	reportv(ctx, 0, "Stored patterns: %d ", m->xxh->pat);
+	D_(D_INFO "Stored patterns: %d", mod->pat);
 
-	for (i = 0; i < m->xxh->pat; i++) {
-		PATTERN_ALLOC(i);
-		m->xxp[i]->rows = 64;
-		TRACK_ALLOC(i);
+	for (i = 0; i < mod->pat; i++) {
+		if (pattern_tracks_alloc(mod, i, 64) < 0)
+			return -1;
 
-		fseek(f, start + sh.pataddr[i] + 8, SEEK_SET);
+		hio_seek(f, start + sh.pataddr[i] + 8, SEEK_SET);
 
 		for (j = 0; j < 4; j++) {
 			for (k = 0; k < 64; k++) {
 				event = &EVENT(i, j, k);
-				b1 = read8(f);
+				b1 = hio_read8(f);
 
 				if (b1 & 0x80) {
 					k += b1 & 0x7f;
@@ -131,11 +152,11 @@ static int stim_load(struct xmp_context *ctx, FILE * f, const int start)
 				 *  Description bit set to 0.
 				 */
 
-				b2 = read8(f);
-				b3 = read8(f);
+				b2 = hio_read8(f);
+				b3 = hio_read8(f);
 
 				if ((event->note = b2 & 0x3f) != 0)
-					event->note += 35;
+					event->note += 47;
 				event->ins = b1 & 0x1f;
 				event->fxt = ((b2 >> 4) & 0x0c) | (b1 >> 5);
 				event->fxp = b3;
@@ -143,50 +164,51 @@ static int stim_load(struct xmp_context *ctx, FILE * f, const int start)
 				disable_continue_fx(event);
 			}
 		}
-		reportv(ctx, 0, ".");
 	}
 
-	INSTRUMENT_INIT();
+	if (instrument_init(mod) < 0)
+		return -1;
 
-	reportv(ctx, 0, "\nStored samples : %d ", m->xxh->smp);
+	D_(D_INFO "Stored samples: %d", mod->smp);
 
-	fseek(f, start + sh.smpaddr + m->xxh->smp * 4, SEEK_SET);
+	hio_seek(f, start + sh.smpaddr + mod->smp * 4, SEEK_SET);
 
-	for (i = 0; i < m->xxh->smp; i++) {
-		si.size = read16b(f);
-		si.finetune = read8(f);
-		si.volume = read8(f);
-		si.loop_start = read16b(f);
-		si.loop_size = read16b(f);
+	for (i = 0; i < mod->smp; i++) {
+		si.size = hio_read16b(f);
+		si.finetune = hio_read8(f);
+		si.volume = hio_read8(f);
+		si.loop_start = hio_read16b(f);
+		si.loop_size = hio_read16b(f);
 
-		m->xxi[i] = calloc(sizeof(struct xxm_instrument), 1);
-		m->xxs[i].len = 2 * si.size;
-		m->xxs[i].lps = 2 * si.loop_start;
-		m->xxs[i].lpe = m->xxs[i].lps + 2 * si.loop_size;
-		m->xxs[i].flg = si.loop_size > 1 ? WAVE_LOOPING : 0;
-		m->xxi[i][0].fin = (int8) (si.finetune << 4);
-		m->xxi[i][0].vol = si.volume;
-		m->xxi[i][0].pan = 0x80;
-		m->xxi[i][0].sid = i;
-		m->xxih[i].nsm = !!(m->xxs[i].len);
-		m->xxih[i].rls = 0xfff;
+		if (subinstrument_alloc(mod, i, 1) < 0)
+			return -1;
 
-		if (V(1) && m->xxs[i].len > 2) {
-			report("\n[%2X] %04x %04x %04x %c V%02x %+d ",
-			       i, m->xxs[i].len, m->xxs[i].lps,
-			       m->xxs[i].lpe, si.loop_size > 1 ? 'L' : ' ',
-			       m->xxi[i][0].vol, m->xxi[i][0].fin >> 4);
-		}
+		mod->xxs[i].len = 2 * si.size;
+		mod->xxs[i].lps = 2 * si.loop_start;
+		mod->xxs[i].lpe = mod->xxs[i].lps + 2 * si.loop_size;
+		mod->xxs[i].flg = si.loop_size > 1 ? XMP_SAMPLE_LOOP : 0;
+		mod->xxi[i].sub[0].fin = (int8) (si.finetune << 4);
+		mod->xxi[i].sub[0].vol = si.volume;
+		mod->xxi[i].sub[0].pan = 0x80;
+		mod->xxi[i].sub[0].sid = i;
+		mod->xxi[i].rls = 0xfff;
 
-		if (!m->xxs[i].len)
+		if (mod->xxs[i].len > 0)
+			mod->xxi[i].nsm = 1;
+
+		D_(D_INFO "[%2X] %04x %04x %04x %c V%02x %+d",
+			       i, mod->xxs[i].len, mod->xxs[i].lps,
+			       mod->xxs[i].lpe, si.loop_size > 1 ? 'L' : ' ',
+			       mod->xxi[i].sub[0].vol, mod->xxi[i].sub[0].fin >> 4);
+
+		if (!mod->xxs[i].len)
 			continue;
-		xmp_drv_loadpatch(ctx, f, m->xxi[i][0].sid, m->c4rate, 0,
-				  &m->xxs[m->xxi[i][0].sid], NULL);
-		reportv(ctx, 0, ".");
-	}
-	reportv(ctx, 0, "\n");
 
-	m->xxh->flg |= XXM_FLG_MODRNG;
+		if (load_sample(m, f, 0, &mod->xxs[i], NULL) < 0)
+			return -1;
+	}
+
+	m->quirk |= QUIRK_MODRNG;
 
 	return 0;
 }
