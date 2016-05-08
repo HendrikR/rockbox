@@ -238,7 +238,13 @@ const struct afmt_entry audio_formats[AFMT_NUM_CODECS] =
         AFMT_ENTRY("Opus", "opus", NULL, get_ogg_metadata,   "opus\0"),
     /* XMP Module Player */
     [AFMT_XMP] =
-        AFMT_ENTRY("XMP", "xmp", NULL, get_xmp_metadata, "it\0s3m\0"),
+        AFMT_ENTRY("XMP", "xmp", NULL, get_xmp_metadata,
+		   "xm\0it\0s3m\0s2m\0stm\0mdl\0imf\0mtm\0ptm\0ult\0far\0669\0"
+		   "mod\0med\0digi\0dbm\0okt\0sfx\0"
+		   "xmz\0mdz\0itz\0s3z\0amf\0"
+		   "psm\0j2b\0umx\0gmc\0di\0stim\0"
+		   "amd\0rad\0hsc\0"),
+    
 #endif
 };
 
