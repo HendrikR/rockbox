@@ -33,33 +33,13 @@
 
 bool get_xmp_metadata(int fd, struct mp3entry* id3)
 {
-    // TODO: ugly temporary metadata. see below.
-    id3->title = "libxmp test";
-    id3->bitrate = filesize(fd)/1024; // size in kb
+    /* TODO: Ugly temporary metadata. */
+    /* At least, we need proper title and length. */
+    id3->bitrate = 706;
     id3->frequency = 44100;
-    id3->length = 10*1000;
+    id3->length = 180*1000;
     id3->vbr = false;
     id3->filesize = filesize(fd);
     
-    // TODO: this would be the good variant, but does not work because of unsuitable makefiles
-    //xmp_context ctx = xmp_create_context();
-    /*
-    // TODO: Write this function which is like xmp_load_module, but takes a file descriptor instead of a file name.
-    if (xmp_load_module_fd(ctx, id3->path, fd) < 0) {
-	return false;
-    }
-    struct xmp_module_info* modinfo = xmp_get_module_info(ctx, NULL);
-    id3->title = modinfo->name;
-    id3->bitrate = filesize(fd)/1024; // size in kb
-    id3->frequency = 44100;
-    id3->length = modinfo->time;
-    id3->vbr = false;
-    id3->filesize = filesize(fd);
-    */
-
-    /*
-    xmp_deinit_formats(ctx);
-    xmp_deinit(ctx);
-    */
     return true;
 }
