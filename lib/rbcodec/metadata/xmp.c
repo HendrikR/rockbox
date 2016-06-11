@@ -25,11 +25,9 @@
 #include "platform.h"
 
 #include "metadata.h"
-#include <string-extra.h>
 #include "metadata_common.h"
 #include "metadata_parsers.h"
 #include "rbunicode.h"
-#include "codecs/libxmp/xmp.h"
 
 bool get_xmp_metadata(int fd, struct mp3entry* id3)
 {

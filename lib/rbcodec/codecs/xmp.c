@@ -28,10 +28,9 @@ CODEC_HEADER
 enum codec_status codec_main(enum codec_entry_call_reason reason)
 {
     switch(reason) {
-    CODEC_LOAD:
-	ci->configure(DSP_SET_FREQUENCY, 44100);
-	ci->configure(DSP_SET_SAMPLE_DEPTH, 16);
-	ci->configure(DSP_SET_STEREO_MODE, STEREO_MONO);
+    case CODEC_LOAD:
+	break;
+    case CODEC_UNLOAD:
 	break;
     }
     return CODEC_OK;
@@ -39,7 +38,6 @@ enum codec_status codec_main(enum codec_entry_call_reason reason)
 
 /* this is called for each file to process */
 enum codec_status codec_run(void) {
-    
     if (codec_init()) {
         DEBUGF("codec init failed\n");
         return CODEC_ERROR;
@@ -59,9 +57,10 @@ enum codec_status codec_run(void) {
     
     xmp_get_module_info(ctx, &mod_info);
     xmp_get_frame_info(ctx, &info);
-    printf("now playing: %s, type %s, length %d seconds\n",
+    DEBUGF("now playing: %s, type %s, length %d seconds\n",
 	   mod_info.mod->name, mod_info.mod->type, info.total_time / 1000);
     /* TODO: set metadata in metadata/xmp.c*/
+    
     
     xmp_start_player(ctx, 44100, 0);
     /* TODO: set stereo separation from rockbox config. other things might also be configurable. */
@@ -79,13 +78,13 @@ enum codec_status codec_run(void) {
     ci->id3->elapsed = 0;
     /* TODO: id3->samples, id3->frame_count, id3->bytesperframe */
     ci->id3->vbr = false;
-    ci->id3->channels = 1;
+    ci->id3->channels = 2;
     /* TODO: id3->offset and id3->index for resuming */
-
+    
     ci->configure(DSP_SET_FREQUENCY, 44100);
     ci->configure(DSP_SET_SAMPLE_DEPTH, 16);
     ci->configure(DSP_SET_STEREO_MODE, STEREO_INTERLEAVED);
-    ci->set_elapsed(info.total_time);
+    
     ci->seek_buffer(0);
 
     uint32_t elapsedtime = 0;
