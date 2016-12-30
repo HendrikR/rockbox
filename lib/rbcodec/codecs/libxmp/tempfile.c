@@ -30,10 +30,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <unistd.h>
+
 
 #ifdef HAVE_UMASK
-#include <sys/stat.h>
+
 #endif
 
 #include "libxmp/tempfile.h"
@@ -64,7 +64,7 @@ static int get_temp_dir(char *buf, int size)
 #elif defined ANDROID
 
 #include <sys/types.h>
-#include <sys/stat.h>
+
 
 static int get_temp_dir(char *buf, int size)
 {

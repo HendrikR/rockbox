@@ -20,7 +20,6 @@
  * THE SOFTWARE.
  */
 
-#include <unistd.h>
 #ifdef __native_client__
 #include <sys/syslimits.h>
 #else
@@ -45,7 +44,7 @@ const struct format_loader pw_loader = {
 
 #define BUF_SIZE 0x10000
 
-int pw_test_format(HIO_HANDLE *f, char *t, const int start,
+int pw_test_format(HIO_HANDLE *f, char *t, const int UNUSED(start),
 		   struct xmp_test_info *info)
 {
 	unsigned char *b;
@@ -79,12 +78,12 @@ int pw_test_format(HIO_HANDLE *f, char *t, const int start,
 	return extra == 0 ? 0 : -1;
 }
 
-static int pw_test(HIO_HANDLE *f, char *t, const int start)
+static int pw_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	return pw_test_format(f, t, start, NULL);
 }
 
-static int pw_load(struct module_data *m, HIO_HANDLE *h, const int start)
+static int pw_load(struct module_data *m, HIO_HANDLE *h, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

@@ -17,7 +17,7 @@
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
-#include <sys/stat.h>
+
 #include "libxmp/common.h"
 #include "libxmp/depacker.h"
 
@@ -48,7 +48,7 @@ static int initGetb(struct bitstream *bs, uint8 *src, uint32 src_length)
 
   bs->left = readmem16b((uint8 *)bs->src); /* bit counter */
   /*if (bs->left & (~0xf))
-    fprintf(stderr, "Workarounded an ancient stc bug\n");*/
+    D_(D_CRIT "Workarounded an ancient stc bug\n");*/
   /* mask off any corrupt bits */
   bs->left &= 0x000f;
   bs->src--;
@@ -390,7 +390,7 @@ static int decrunch_s404(FILE *in, /* size_t s, */ FILE *out)
   }
 
   if (checkS404File((uint32 *) src, /*s,*/ &oLen, &pLen, &sLen)) {
-    /*fprintf(stderr,"S404 Error: checkS404File() failed..\n");*/
+    /*D_(D_CRIT"S404 Error: checkS404File() failed..\n");*/
     goto error;
   }
 
@@ -400,7 +400,7 @@ static int decrunch_s404(FILE *in, /* size_t s, */ FILE *out)
   }
 
   if ((dst = malloc(oLen)) == NULL) {
-    /*fprintf(stderr,"S404 Error: malloc(%d) failed..\n", oLen);*/
+    /*D_(D_CRIT"S404 Error: malloc(%d) failed..\n", oLen);*/
     goto error;
   }
 
@@ -410,7 +410,7 @@ static int decrunch_s404(FILE *in, /* size_t s, */ FILE *out)
   }
 
   if (fwrite(dst, oLen, 1, out) == 0) {
-      /*fprintf(stderr,"S404 Error: fwrite() failed..\n");*/
+      /*D_(D_CRIT"S404 Error: fwrite() failed..\n");*/
       goto error1;
   }
 

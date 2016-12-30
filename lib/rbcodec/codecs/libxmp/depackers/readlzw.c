@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+
 #include <stdlib.h>
 #include "readrle.h"
 
@@ -88,7 +88,7 @@ if (data->maxstr > REALMAXSTR)
   return NULL;
 
 if((data_out=calloc(1, orig_len))==NULL) {
-  //fprintf(stderr,"nomarch: out of memory!\n");
+  D_(D_CRIT"nomarch: out of memory!\n");
   return NULL;
 }
 
@@ -175,7 +175,7 @@ while(1)
 #if 0
     /* actually, don't bother, just let the CRC tell the story. */
     if(newcode>data->st_last+1)
-      fprintf(stderr,"warning: bad LZW code\n");
+      D_(D_CRIT"warning: bad LZW code\n");
 #endif
 /*    k=findfirstchr(oldcode);*/	/* don't think I actually need this */
     outputstring(oldcode, data);

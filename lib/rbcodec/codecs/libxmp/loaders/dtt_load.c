@@ -35,7 +35,7 @@ const struct format_loader dtt_loader = {
 	dtt_load
 };
 
-static int dtt_test(HIO_HANDLE *f, char *t, const int start)
+static int dtt_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_DskT)
 		return -1;
@@ -45,7 +45,7 @@ static int dtt_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int dtt_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int dtt_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

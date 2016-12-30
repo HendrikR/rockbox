@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+
 #include <stdlib.h>
 
 #include "readrle.h"
@@ -66,7 +66,7 @@ struct rledata rd;
 struct data_in_out io;
 
 if((data_out=malloc(orig_len))==NULL)
-  fprintf(stderr,"nomarch: out of memory!\n"),exit(1);
+  D_(D_CRIT"nomarch: out of memory!\n"),exit(1);
 
 io.data_in_point=data_in; io.data_in_max=data_in+in_len;
 io.data_out_point=data_out; io.data_out_max=data_out+orig_len;

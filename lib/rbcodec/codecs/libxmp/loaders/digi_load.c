@@ -47,7 +47,7 @@ const struct format_loader digi_loader = {
     digi_load
 };
 
-static int digi_test(HIO_HANDLE *f, char *t, const int start)
+static int digi_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     char buf[20];
 
@@ -87,7 +87,7 @@ struct digi_header {
 };
 
 
-static int digi_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int digi_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     struct xmp_event *event = 0;

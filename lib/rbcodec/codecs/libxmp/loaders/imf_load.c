@@ -111,7 +111,7 @@ const struct format_loader imf_loader = {
     imf_load
 };
 
-static int imf_test(HIO_HANDLE *f, char *t, const int start)
+static int imf_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     hio_seek(f, start + 60, SEEK_SET);
     if (hio_read32b(f) != MAGIC_IM10)
@@ -228,7 +228,7 @@ static void xlat_fx (int c, uint8 *fxt, uint8 *fxp)
 }
 
 
-static int imf_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int imf_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int c, r, i, j;

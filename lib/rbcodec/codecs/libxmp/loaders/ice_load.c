@@ -36,7 +36,7 @@ const struct format_loader ice_loader = {
 	ice_load
 };
 
-static int ice_test(HIO_HANDLE * f, char *t, const int start)
+static int ice_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	uint32 magic;
 
@@ -69,7 +69,7 @@ struct ice_header {
 	uint32 magic;		/* 'MTN\0', 'IT10' */
 };
 
-static int ice_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int ice_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

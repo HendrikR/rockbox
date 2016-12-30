@@ -97,7 +97,7 @@ struct lzd_data {
 #define push(x)  {  \
                      data->stack[data->stack_pointer++] = (x); \
                      if (data->stack_pointer >= STACKSIZE) \
-                        fprintf(stderr, "libxmp: stack overflow in lzd().\n"); \
+                        D_(D_CRIT "libxmp: stack overflow in lzd().\n"); \
                   }
 #define pop()    (data->stack[--data->stack_pointer])
 
@@ -160,7 +160,7 @@ static unsigned rd_dcode(struct lzd_data *data)
       assert(space_left == 0); */
 
       if (BLOCKREAD (data->in_f, ptra, byte_offset) == -1)
-         fprintf(stderr, "libxmp: I/O error in lzd:rd_dcode.\n");
+         D_(D_CRIT "libxmp: I/O error in lzd:rd_dcode.\n");
       byte_offset = 0;
    }
    ptra = byte_offset + data->in_buf_adr;
@@ -191,7 +191,7 @@ static void wr_dchar(int ch, struct lzd_data *data)
 	check_break();
 #endif
       if (BLOCKWRITE (data->out_f, data->out_buf_adr, output_offset) != output_offset)
-         fprintf(stderr, "libxmp: write error in lzd:wr_dchar.\n");
+         D_(D_CRIT "libxmp: write error in lzd:wr_dchar.\n");
       addbfcrc(data->out_buf_adr, output_offset, data);	/* update CRC */
       output_offset = 0;			/* restore empty buffer */
    }
@@ -267,7 +267,7 @@ static int lzd(BLOCKFILE input_f, BLOCKFILE output_f, uint32 *crc_table)
       if (data->cur_code == Z_EOF) {
          if (output_offset != 0) {
             if (BLOCKWRITE (data->out_f, data->out_buf_adr, output_offset) != output_offset)
-               fprintf(stderr, "libxmp: output error in lzd().\n");
+               D_(D_CRIT "libxmp: output error in lzd().\n");
             addbfcrc(data->out_buf_adr, output_offset, data);
          }
    

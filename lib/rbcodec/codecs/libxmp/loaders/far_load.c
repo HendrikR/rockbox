@@ -81,7 +81,7 @@ const struct format_loader far_loader = {
     far_load
 };
 
-static int far_test(HIO_HANDLE *f, char *t, const int start)
+static int far_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     if (hio_read32b(f) != MAGIC_FAR)
 	return -1;
@@ -121,7 +121,7 @@ static const uint8 fx[] = {
 };
 
 
-static int far_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int far_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j, vib = 0;

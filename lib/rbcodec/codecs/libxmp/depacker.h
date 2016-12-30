@@ -2,6 +2,7 @@
 #define XMP_DEPACKER_H
 
 #include <stdio.h>
+#include "libxmp/rockbox_xmp.h"
 
 extern struct depacker zip_depacker;
 extern struct depacker lha_depacker;

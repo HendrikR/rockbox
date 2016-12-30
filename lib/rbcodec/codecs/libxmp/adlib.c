@@ -21,7 +21,7 @@
  */
 
 #include <stdlib.h>
-#include "xmp.h"
+#include "libxmp/xmp.h"
 #include "libxmp/common.h"
 #include "libxmp/synth.h"
 #include "fmopl.h"
@@ -127,7 +127,7 @@ static const int ym3812_note[] = {
 
 #ifdef DEBUG_ADLIB
 #include <sys/io.h>
-#include <unistd.h>
+
 #define DELAY(x) do { int i; for (i = 0; i < x; i++) inb (0x388); } while (0)
 #endif
 

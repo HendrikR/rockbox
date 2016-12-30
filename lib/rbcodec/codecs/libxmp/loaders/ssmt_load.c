@@ -34,7 +34,7 @@ const struct format_loader mtp_loader = {
 	mtp_load
 };
 
-static int mtp_test(HIO_HANDLE *f, char *t, const int start)
+static int mtp_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[6];
 
@@ -55,7 +55,7 @@ static int mtp_test(HIO_HANDLE *f, char *t, const int start)
 #define NAME_SIZE 255
 
 
-static int mtp_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mtp_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

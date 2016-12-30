@@ -413,7 +413,7 @@ static struct abk_instrument* read_abk_insts(HIO_HANDLE *f, uint32 inst_section_
     return inst;
 }
 
-static int abk_test(HIO_HANDLE *f, char *t, const int start)
+static int abk_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     char music[8];
 
@@ -440,7 +440,7 @@ static int abk_test(HIO_HANDLE *f, char *t, const int start)
     return 0;
 }
 
-static int abk_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int abk_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     int i,j,k;
     uint16 pattern;
@@ -450,7 +450,7 @@ static int abk_load(struct module_data *m, HIO_HANDLE *f, const int start)
     struct xmp_module *mod = &m->mod;
 
     struct abk_header main_header;
-    struct abk_instrument *ci;
+    struct abk_instrument *cinst;
     struct abk_song song;
     struct abk_playlist playlist;
 
@@ -516,23 +516,23 @@ static int abk_load(struct module_data *m, HIO_HANDLE *f, const int start)
     D_(D_INFO "Instruments: %d", mod->ins);
 
     /* read all the instruments in */
-    ci = read_abk_insts(f, inst_section_size, mod->ins);
-    if (ci == NULL) {
+    cinst = read_abk_insts(f, inst_section_size, mod->ins);
+    if (cinst == NULL) {
         return -1;
     }
 
     /* store the location of the first sample so we can read them later. */
-    first_sample_offset = AMOS_MAIN_HEADER + main_header.instruments_offset + ci[0].sample_offset;
+    first_sample_offset = AMOS_MAIN_HEADER + main_header.instruments_offset + cinst[0].sample_offset;
 
     for (i = 0; i < mod->ins; i++)
     {
         if (subinstrument_alloc(mod, i, 1) < 0)
         {
-            free(ci);
+            free(cinst);
             return -1;
         }
 
-        mod->xxs[i].len = ci[i].sample_length << 1;
+        mod->xxs[i].len = cinst[i].sample_length << 1;
 
         if (mod->xxs[i].len > 0)
         {
@@ -540,26 +540,26 @@ static int abk_load(struct module_data *m, HIO_HANDLE *f, const int start)
         }
 
         /* the repeating stuff. */
-        if (ci[i].repeat_offset > ci[i].sample_offset)
+        if (cinst[i].repeat_offset > cinst[i].sample_offset)
         {
-            mod->xxs[i].lps = (ci[i].repeat_offset - ci[i].sample_offset) << 1;
+            mod->xxs[i].lps = (cinst[i].repeat_offset - cinst[i].sample_offset) << 1;
         }
         else
         {
             mod->xxs[i].lps = 0;
         }
-        mod->xxs[i].lpe = ci[i].repeat_end;
+        mod->xxs[i].lpe = cinst[i].repeat_end;
         if (mod->xxs[i].lpe > 2) {
             mod->xxs[i].lpe <<= 1;
             mod->xxs[i].flg = XMP_SAMPLE_LOOP;
         }
 /*printf("%02x lps=%04x lpe=%04x\n", i,  mod->xxs[i].lps, mod->xxs[i].lpe);*/
 
-        mod->xxi[i].sub[0].vol = ci[i].sample_volume;
+        mod->xxi[i].sub[0].vol = cinst[i].sample_volume;
         mod->xxi[i].sub[0].pan = 0x80;
         mod->xxi[i].sub[0].sid = i;
 
-        instrument_name(mod, i, (uint8*)ci[i].sample_name, 16);
+        instrument_name(mod, i, (uint8*)cinst[i].sample_name, 16);
 
         D_(D_INFO "[%2X] %-14.14s %04x %04x %04x %c", i,
            mod->xxi[i].name, mod->xxs[i].len, mod->xxs[i].lps, mod->xxs[i].lpe,

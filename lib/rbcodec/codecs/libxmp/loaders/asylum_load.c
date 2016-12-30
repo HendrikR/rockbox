@@ -36,7 +36,7 @@ const struct format_loader asylum_loader = {
 	asylum_load
 };
 
-static int asylum_test(HIO_HANDLE *f, char *t, const int start)
+static int asylum_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[32];
 
@@ -51,7 +51,7 @@ static int asylum_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int asylum_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int asylum_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

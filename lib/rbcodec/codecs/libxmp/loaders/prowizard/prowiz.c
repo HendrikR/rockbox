@@ -8,9 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include "xmp.h"
+#include "libxmp/xmp.h"
 
 #include "prowiz.h"
 

@@ -42,7 +42,7 @@ const struct format_loader dmf_loader = {
 	dmf_load
 };
 
-static int dmf_test(HIO_HANDLE * f, char *t, const int start)
+static int dmf_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_DDMF)
 		return -1;
@@ -172,7 +172,7 @@ static int unpack(uint8 *psample, uint8 *ibuf, uint8 *ibufmax, uint32 maxlen)
  * IFF chunk handlers
  */
 
-static int get_sequ(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_sequ(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -190,7 +190,7 @@ static int get_sequ(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, r, chn;
@@ -274,7 +274,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_smpi(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_smpi(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -358,7 +358,7 @@ static void dynamic_buffer_free(struct dynamic_buffer* buf)
 	free(buf->data);
 }
 
-static int get_smpd(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_smpd(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -403,7 +403,7 @@ error:
 	return -1;
 }
 
-static int dmf_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int dmf_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	iff_handle handle;

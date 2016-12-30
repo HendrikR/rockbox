@@ -90,7 +90,7 @@ const struct format_loader hmn_loader = {
 #define MAGIC_FEST	MAGIC4('F', 'E', 'S', 'T')
 #define MAGIC_MK	MAGIC4('M', '&', 'K', '!')
 
-static int hmn_test(HIO_HANDLE * f, char *t, const int start)
+static int hmn_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	int magic;
 
@@ -113,7 +113,7 @@ struct mupp {
 	uint8 dataloopend;
 };
 
-static int hmn_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int hmn_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

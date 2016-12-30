@@ -33,7 +33,7 @@ const struct format_loader gtk_loader = {
 	gtk_load
 };
 
-static int gtk_test(HIO_HANDLE * f, char *t, const int start)
+static int gtk_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	char buf[4];
 
@@ -135,7 +135,7 @@ static void translate_effects(struct xmp_event *event)
 	}
 }
 
-static int gtk_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int gtk_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "xmp.h"
+#include "libxmp/xmp.h"
 #include "libxmp/common.h"
 #include "libxmp/synth.h"
 

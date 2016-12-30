@@ -20,11 +20,13 @@
 #	include <stdint.h>
 */
 #include "libxmp/common.h"
+/*
 #	define false 0
 #	define true 1
 #ifndef B_BEOS_VERSION
 	typedef int bool;
 #endif
+*/
 #endif
 
 #ifdef __cplusplus

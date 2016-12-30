@@ -32,7 +32,7 @@ const struct format_loader ssn_loader = {
     ssn_load
 };
 
-static int ssn_test(HIO_HANDLE *f, char *t, const int start)
+static int ssn_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     uint16 id;
 
@@ -61,7 +61,7 @@ struct ssn_file_header {
     uint8 marker[2];		/* 'if'=standard, 'JN'=extended */
     uint8 message[108];		/* Song message */
     uint8 nos;			/* Number of samples (0-64) */
-    uint8 nop;			/* Number of patterns (0-128) */
+    uint8 no_p;			/* Number of patterns (0-128) */
     uint8 loop;			/* Loop order number */
     uint8 order[128];		/* Order list */
     uint8 speed[128];		/* Tempo list for patterns */
@@ -90,7 +90,7 @@ static const uint8 fx[] = {
 };
 
 
-static int ssn_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int ssn_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j;
@@ -104,10 +104,10 @@ static int ssn_load(struct module_data *m, HIO_HANDLE *f, const int start)
     hio_read(&sfh.marker, 2, 1, f);	/* 'if'=standard, 'JN'=extended */
     hio_read(&sfh.message, 108, 1, f);	/* Song message */
     sfh.nos = hio_read8(f);		/* Number of samples (0-64) */
-    sfh.nop = hio_read8(f);		/* Number of patterns (0-128) */
+    sfh.no_p = hio_read8(f);		/* Number of patterns (0-128) */
 
     /* Sanity check */
-    if (sfh.nos > 64 || sfh.nop > 128)
+    if (sfh.nos > 64 || sfh.no_p > 128)
 	return -1;
 
     sfh.loop = hio_read8(f);		/* Loop order number */
@@ -120,10 +120,10 @@ static int ssn_load(struct module_data *m, HIO_HANDLE *f, const int start)
 
     mod->chn = 8;
     mod->ins = sfh.nos;
-    mod->pat = sfh.nop;
+    mod->pat = sfh.no_p;
     mod->trk = mod->chn * mod->pat;
     for (i = 0; i < 128; i++) {
-	if (sfh.order[i] > sfh.nop)
+	if (sfh.order[i] > sfh.no_p)
 	    break;
     }
     mod->len = i;

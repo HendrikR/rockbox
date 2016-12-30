@@ -40,7 +40,7 @@ const struct format_loader pt3_loader = {
 	pt3_load
 };
 
-static int pt3_test(HIO_HANDLE *f, char *t, const int start)
+static int pt3_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_FORM)
 		return -1;
@@ -77,7 +77,7 @@ static int pt3_test(HIO_HANDLE *f, char *t, const int start)
 #define PT3_FLAG_RAWPAT	0x0080	/* Packed patterns if not set */
 
 
-static int get_info(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_info(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	/* int flags; */
@@ -115,21 +115,21 @@ static int get_info(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_cmnt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_cmnt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	D_(D_INFO "Comment size: %d", size);
 
 	return 0;
 }
 
-static int get_ptdt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_ptdt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	ptdt_load(m, f, 0);
 
 	return 0;
 }
 
-static int pt3_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int pt3_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	iff_handle handle;
 	char buf[20];
@@ -176,7 +176,7 @@ static int pt3_load(struct module_data *m, HIO_HANDLE *f, const int start)
 	return 0;
 }
 
-static int ptdt_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int ptdt_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

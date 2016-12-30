@@ -41,7 +41,7 @@ const struct format_loader gdm_loader = {
 	gdm_load
 };
 
-static int gdm_test(HIO_HANDLE *f, char *t, const int start)
+static int gdm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_GDM)
 		return -1;
@@ -110,7 +110,7 @@ void fix_effect(uint8 *fxt, uint8 *fxp)
 }
 
 
-static int gdm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int gdm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

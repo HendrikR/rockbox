@@ -17,7 +17,7 @@ static int depack_pha(HIO_HANDLE *in, FILE *out)
 	uint8 c1, c2;
 	uint8 pnum[128];
 	uint8 pnum1[128];
-	uint8 nop;
+	uint8 no_p;
 	uint8 *pdata;
 	uint8 *pat;
 	uint8 onote[4][4];
@@ -157,16 +157,16 @@ restart:
 	}
 
 	/* try to get the number of pattern in pattern list */
-	for (nop = 128; nop > 0; nop--) {
-		if (pnum[nop - 1] != 0)
+	for (no_p = 128; no_p > 0; no_p--) {
+		if (pnum[no_p - 1] != 0)
 			break;
 	}
 
 	/* write this value */
-	write8(out, nop);
+	write8(out, no_p);
 
 	/* get highest pattern number */
-	for (i = 0; i < nop; i++)
+	for (i = 0; i < no_p; i++)
 		if (pnum[i] > npat)
 			npat = pnum[i];
 

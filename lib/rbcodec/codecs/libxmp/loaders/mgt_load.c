@@ -36,7 +36,7 @@ const struct format_loader mgt_loader = {
 	mgt_load
 };
 
-static int mgt_test(HIO_HANDLE *f, char *t, const int start)
+static int mgt_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	int sng_ptr;
 
@@ -55,7 +55,7 @@ static int mgt_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int mgt_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mgt_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

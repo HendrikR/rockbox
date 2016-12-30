@@ -50,7 +50,7 @@ struct tm *localtime_r(const time_t * timep, struct tm *result)
 }
 #endif
 
-static int it_test(HIO_HANDLE * f, char *t, const int start)
+static int it_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_IMPM)
 		return -1;
@@ -986,7 +986,7 @@ static int load_it_pattern(struct module_data *m, int i, int new_fx,
 	return 0;
 }
 
-static int it_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int it_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int c, i, j;

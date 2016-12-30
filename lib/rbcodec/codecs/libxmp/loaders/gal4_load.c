@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include <unistd.h>
+//
 #include <limits.h>
 #include "libxmp/loaders/loader.h"
 #include "libxmp/loaders/iff.h"
@@ -40,7 +40,7 @@ const struct format_loader gal4_loader = {
 	gal4_load
 };
 
-static int gal4_test(HIO_HANDLE *f, char *t, const int start)
+static int gal4_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
         if (hio_read32b(f) != MAGIC4('R', 'I', 'F', 'F'))
 		return -1;
@@ -63,7 +63,7 @@ struct local_data {
     int snum;
 };
 
-static int get_main(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_main(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	char buf[64];
@@ -91,7 +91,7 @@ static int get_main(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_ordr(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_ordr(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -108,7 +108,7 @@ static int get_ordr(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_patt_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt_cnt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -121,7 +121,7 @@ static int get_patt_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *pa
 	return 0;
 }
 
-static int get_inst_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_inst_cnt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -139,7 +139,7 @@ static int get_inst_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *pa
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event, dummy;
@@ -206,7 +206,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 9;
 }
 
-static int get_inst(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_inst(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -359,7 +359,7 @@ static int get_inst(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int gal4_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int gal4_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	iff_handle handle;

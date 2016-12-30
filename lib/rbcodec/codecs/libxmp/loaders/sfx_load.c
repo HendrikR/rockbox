@@ -44,7 +44,7 @@ const struct format_loader sfx_loader = {
 	sfx_load
 };
 
-static int sfx_test(HIO_HANDLE * f, char *t, const int start)
+static int sfx_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	uint32 a, b;
 
@@ -83,7 +83,7 @@ struct sfx_header2 {
 };
 
 static int sfx_13_20_load(struct module_data *m, HIO_HANDLE *f, const int nins,
-			  const int start)
+			  const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;
@@ -248,7 +248,7 @@ static int sfx_13_20_load(struct module_data *m, HIO_HANDLE *f, const int nins,
 	return 0;
 }
 
-static int sfx_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int sfx_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	if (sfx_13_20_load(m, f, 15, start) < 0)
 		return sfx_13_20_load(m, f, 31, start);

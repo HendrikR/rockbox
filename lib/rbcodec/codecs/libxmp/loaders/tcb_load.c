@@ -40,7 +40,7 @@ const struct format_loader tcb_loader = {
 	tcb_load
 };
 
-static int tcb_test(HIO_HANDLE *f, char *t, const int start)
+static int tcb_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	uint8 buffer[10];
 
@@ -54,7 +54,7 @@ static int tcb_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int tcb_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int tcb_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

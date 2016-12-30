@@ -45,7 +45,7 @@ const struct format_loader xm_loader = {
 	xm_load
 };
 
-static int xm_test(HIO_HANDLE *f, char *t, const int start)
+static int xm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[20];
 
@@ -572,7 +572,7 @@ static int load_instruments(struct module_data *m, int version, HIO_HANDLE *f)
     return 0;
 }
 
-static int xm_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int xm_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

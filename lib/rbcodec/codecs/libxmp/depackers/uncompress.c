@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "libxmp/depacker.h"
+#include "libxmp/common.h"
 
 #define	MAGIC_1		31	/* First byte of compressed file */
 #define	MAGIC_2		157	/* Second byte of compressed file */
@@ -93,7 +94,7 @@ static int decrunch_compress(FILE * in, FILE * out)
 	maxmaxcode = MAXCODE(maxbits);
 
 	if (maxbits > BITS) {
-		/*fprintf(stderr,
+		/*D_(D_CRIT
 		   "%s: compressed with %d bits, can only handle %d bits\n",
 		   (*ifname != '\0' ? ifname : "stdin"), maxbits, BITS);
 		   exit_code = 4; */
@@ -164,9 +165,9 @@ static int decrunch_compress(FILE * in, FILE * out)
 
 			if (oldcode == -1) {
 				if (code >= 256) {
-					fprintf(stderr, "oldcode:-1 code:%i\n",
+					D_(D_CRIT "oldcode:-1 code:%i\n",
 						(int)(code));
-					fprintf(stderr, "uncompress: corrupt input\n");
+					D_(D_CRIT "uncompress: corrupt input\n");
 					/* abort_compress(); */
 					return -1;
 				}
@@ -195,12 +196,12 @@ static int decrunch_compress(FILE * in, FILE * out)
 					posbits -= n_bits;
 					p = &inbuf[posbits >> 3];
 
-					fprintf(stderr,
+					D_(D_CRIT
 						"insize:%d posbits:%d inbuf:%02X %02X %02X %02X %02X (%d)\n",
 						insize, posbits, p[-1], p[0],
 						p[1], p[2], p[3],
 						(posbits & 07));*/
-					fprintf(stderr,
+					D_(D_CRIT
 						"uncompress: corrupt input\n");
 					/* abort_compress(); */
 					return -1;

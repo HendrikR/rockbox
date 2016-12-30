@@ -866,7 +866,7 @@ static int extract_normal(FILE * in_file, struct LZXDecrData *decr)
 			if (ferror(in_file))
 			    perror("FRead(Data)");
 			else
-			    fprintf(stderr, "EOF: Data\n"); */
+			    D_(D_CRIT "EOF: Data\n"); */
 			abort = 1;
 			break;	/* fatal error */
 		    }
@@ -970,7 +970,7 @@ static int extract_archive(FILE * in_file, struct LZXDecrData *decr)
 	}
 
 	if (actual != 31) {
-	    /* fprintf(stderr, "EOF: Archive_Header\n"); */
+	    /* D_(D_CRIT "EOF: Archive_Header\n"); */
 	    continue;
 	}
 
@@ -989,7 +989,7 @@ static int extract_archive(FILE * in_file, struct LZXDecrData *decr)
 	}
 
 	if (actual != temp) {
-	    /* fprintf(stderr, "EOF: Header_Filename\n"); */
+	    /* D_(D_CRIT "EOF: Header_Filename\n"); */
 	    continue;
 	}
 
@@ -1004,7 +1004,7 @@ static int extract_archive(FILE * in_file, struct LZXDecrData *decr)
 	}
 
 	if (actual != temp) {
-	    /* fprintf(stderr, "EOF: Header_Comment\n"); */
+	    /* D_(D_CRIT "EOF: Header_Comment\n"); */
 	    continue;
 	}
 
@@ -1012,7 +1012,7 @@ static int extract_archive(FILE * in_file, struct LZXDecrData *decr)
 	decr->sum = crc32_A1(decr->header_comment, temp, decr->sum);
 
 	if (decr->sum != decr->crc) {
-	    /* fprintf(stderr, "CRC: Archive_Header\n"); */
+	    /* D_(D_CRIT "CRC: Archive_Header\n"); */
 	    continue;
 	}
 
@@ -1024,7 +1024,7 @@ static int extract_archive(FILE * in_file, struct LZXDecrData *decr)
 	/* allocate a filename node */
 	node = malloc(sizeof(struct filename_node));
 	if (node == NULL) {
-	    /* fprintf(stderr, "MAlloc(Filename_node)\n"); */
+	    /* D_(D_CRIT "MAlloc(Filename_node)\n"); */
 	    continue;
 	}
 

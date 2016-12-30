@@ -1,3 +1,4 @@
+#include "rockbox_xmp.h"
 #ifdef __SUNPRO_C
 #pragma error_messages (off,E_EMPTY_TRANSLATION_UNIT)
 #endif
@@ -38,7 +39,7 @@
  */
 
 #include <string.h>
-#include <unistd.h>
+
 #include <fcntl.h>
 #include <errno.h>
 

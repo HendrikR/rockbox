@@ -40,7 +40,7 @@ const struct format_loader stim_loader = {
 	stim_load
 };
 
-static int stim_test(HIO_HANDLE *f, char *t, const int start)
+static int stim_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_STIM)
 		return -1;
@@ -72,7 +72,7 @@ struct stim_header {
 	uint32 pataddr[64];	/* Pattern addresses (add 0xc) */
 };
 
-static int stim_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int stim_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, k;

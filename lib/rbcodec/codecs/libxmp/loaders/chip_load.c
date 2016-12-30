@@ -33,7 +33,7 @@ const struct format_loader chip_loader = {
 	chip_load
 };
 
-static int chip_test(HIO_HANDLE *f, char *t, const int start)
+static int chip_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[4];
 
@@ -51,7 +51,7 @@ static int chip_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int chip_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int chip_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct mod_header mh;

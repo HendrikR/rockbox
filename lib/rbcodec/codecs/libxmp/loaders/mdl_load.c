@@ -40,7 +40,7 @@ const struct format_loader mdl_loader = {
     mdl_load
 };
 
-static int mdl_test(HIO_HANDLE *f, char *t, const int start)
+static int mdl_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     uint16 id;
 
@@ -358,7 +358,7 @@ static int unpack_sample16(uint8 *t, uint8 *f, int len, int l)
  * IFF chunk handlers
  */
 
-static int get_chunk_in(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_in(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     int i;
@@ -393,7 +393,7 @@ static int get_chunk_in(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_pa(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_pa(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     int i, j, chn;
@@ -429,7 +429,7 @@ static int get_chunk_pa(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_p0(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_p0(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     int i, j;
@@ -462,7 +462,7 @@ static int get_chunk_p0(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_tr(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_tr(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     int i, j, k, row, len, max_trk;
@@ -593,7 +593,7 @@ static int get_chunk_tr(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return -1;
 }
 
-static int get_chunk_ii(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_ii(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     struct local_data *data = (struct local_data *)parm;
@@ -675,7 +675,7 @@ static int get_chunk_ii(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_is(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_is(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     struct local_data *data = (struct local_data *)parm;
@@ -735,7 +735,7 @@ static int get_chunk_is(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_i0(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_i0(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     struct local_data *data = (struct local_data *)parm;
@@ -800,7 +800,7 @@ static int get_chunk_i0(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_sa(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_sa(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct xmp_module *mod = &m->mod;
     struct local_data *data = (struct local_data *)parm;
@@ -873,7 +873,7 @@ static int get_chunk_sa(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return -1;
 }
 
-static int get_chunk_ve(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_ve(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct local_data *data = (struct local_data *)parm;
     int i;
@@ -895,7 +895,7 @@ static int get_chunk_ve(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_pe(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_pe(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct local_data *data = (struct local_data *)parm;
     int i;
@@ -917,7 +917,7 @@ static int get_chunk_pe(struct module_data *m, int size, HIO_HANDLE *f, void *pa
     return 0;
 }
 
-static int get_chunk_fe(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_chunk_fe(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
     struct local_data *data = (struct local_data *)parm;
     int i;
@@ -940,7 +940,7 @@ static int get_chunk_fe(struct module_data *m, int size, HIO_HANDLE *f, void *pa
 }
 
 
-static int mdl_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mdl_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     iff_handle handle;

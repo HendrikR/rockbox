@@ -42,7 +42,7 @@ const struct format_loader ult_loader = {
     ult_load
 };
 
-static int ult_test(HIO_HANDLE *f, char *t, const int start)
+static int ult_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     char buf[15];
 
@@ -97,7 +97,7 @@ struct ult_event {
 };
 
 
-static int ult_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int ult_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j, k, ver, cnt;

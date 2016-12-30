@@ -32,7 +32,7 @@ const struct format_loader amd_loader = {
 	amd_load
 };
 
-static int amd_test(HIO_HANDLE *f, char *t, const int start)
+static int amd_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[9];
 
@@ -223,7 +223,7 @@ static int load_packed_patterns(struct module_data *m, HIO_HANDLE *f)
 	return 0;
 }
 
-static int amd_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int amd_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

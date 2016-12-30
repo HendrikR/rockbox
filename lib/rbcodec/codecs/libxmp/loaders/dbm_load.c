@@ -40,7 +40,7 @@ const struct format_loader dbm_loader = {
 	dbm_load
 };
 
-static int dbm_test(HIO_HANDLE * f, char *t, const int start)
+static int dbm_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_DBM0)
 		return -1;
@@ -57,7 +57,7 @@ struct local_data {
 };
 
 
-static int get_info(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_info(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int val;
@@ -114,7 +114,7 @@ static int get_info(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return -1;
 }
 
-static int get_song(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_song(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -143,7 +143,7 @@ static int get_song(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_inst(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_inst(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -185,7 +185,7 @@ static int get_inst(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, c, r, n, sz;
@@ -279,7 +279,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_smpl(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_smpl(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, flags;
@@ -318,7 +318,7 @@ static int get_smpl(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_venv(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_venv(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, nenv, ins;
@@ -346,7 +346,7 @@ static int get_venv(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int dbm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int dbm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	iff_handle handle;

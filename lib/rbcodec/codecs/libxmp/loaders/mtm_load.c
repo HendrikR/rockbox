@@ -56,7 +56,7 @@ const struct format_loader mtm_loader = {
 	mtm_load
 };
 
-static int mtm_test(HIO_HANDLE *f, char *t, const int start)
+static int mtm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	uint8 buf[4];
 
@@ -72,7 +72,7 @@ static int mtm_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int mtm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mtm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

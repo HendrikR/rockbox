@@ -41,7 +41,7 @@ static int check_cr(uint8 *s, int n)
 	return -1;
 }
 
-static int coco_test(HIO_HANDLE *f, char *t, const int start)
+static int coco_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	uint8 x, buf[20];
 	uint32 y;
@@ -174,7 +174,7 @@ static void fix_effect(struct xmp_event *e)
 	}
 }
 
-static int coco_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int coco_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

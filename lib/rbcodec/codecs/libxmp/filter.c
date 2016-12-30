@@ -25,7 +25,7 @@
 
 #ifndef LIBXMP_CORE_DISABLE_IT
 
-#include "xmp.h"
+#include "libxmp/xmp.h"
 #include "libxmp/common.h"
 #include "mixer.h"
 

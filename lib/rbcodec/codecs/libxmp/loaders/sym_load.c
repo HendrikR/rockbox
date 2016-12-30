@@ -33,7 +33,7 @@ const struct format_loader sym_loader = {
 	sym_load
 };
 
-static int sym_test(HIO_HANDLE *f, char *t, const int start)
+static int sym_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	uint32 a, b;
 	int i, ver;
@@ -244,7 +244,7 @@ static uint32 readptr16l(uint8 *p)
 	return (b << 8) | a;
 }
 
-static int sym_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int sym_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;
@@ -252,7 +252,7 @@ static int sym_load(struct module_data *m, HIO_HANDLE *f, const int start)
 	int /*ver,*/ infolen, sn[64];
 	uint32 a, b;
 	uint8 *buf;
-	int size, ret;
+	int UNUSED(size), ret;
 	uint8 allowed_effects[8];
 
 	LOAD_INIT();
@@ -461,7 +461,7 @@ static int sym_load(struct module_data *m, HIO_HANDLE *f, const int start)
 		a = hio_read8(f);
 
 		if (a != 0 && a != 1) {
-			fprintf(stderr, "libxmp: unsupported sample type\n");
+			D_(D_CRIT "libxmp: unsupported sample type\n");
 			//return -1;
 		}
 

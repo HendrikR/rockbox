@@ -64,7 +64,7 @@ const struct format_loader stm_loader = {
 	stm_load
 };
 
-static int stm_test(HIO_HANDLE * f, char *t, const int start)
+static int stm_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	char buf[8];
 
@@ -114,7 +114,7 @@ static const uint8 fx[] = {
 	FX_ARPEGGIO	/* J - Arpeggio */
 };
 
-static int stm_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int stm_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

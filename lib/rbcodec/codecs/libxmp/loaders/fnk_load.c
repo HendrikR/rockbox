@@ -34,7 +34,7 @@ const struct format_loader fnk_loader = {
     fnk_load
 };
 
-static int fnk_test(HIO_HANDLE *f, char *t, const int start)
+static int fnk_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     uint8 a, b;
     int size;
@@ -89,7 +89,7 @@ struct fnk_header {
 };
 
 
-static int fnk_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int fnk_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j;

@@ -163,3 +163,4 @@ adlib.c
 md5.c
 load.c
 dataio.c
+rockbox_xmp.c

@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+
+
 #include "libxmp/common.h"
 #include "libxmp/depacker.h"
 
@@ -120,13 +120,13 @@ static int ppdepack(uint8 *data, size_t len, FILE *fo)
   uint32 outlen;
 
   if (len < 16) {
-    /*fprintf(stderr, "File is too short to be a PP file (%u bytes)\n", len);*/
+    /*D_(D_CRIT "File is too short to be a PP file (%u bytes)\n", len);*/
     return -1;
   }
 
   if (data[0]=='P' && data[1]=='P' && data[2]=='2' && data[3]=='0') {
     if (len & 0x03) {
-      /*fprintf(stderr, "File length is not a multiple of 4\n");*/
+      /*D_(D_CRIT "File length is not a multiple of 4\n");*/
       return -1;
     }
     /*crypted = 0;*/
@@ -134,31 +134,31 @@ static int ppdepack(uint8 *data, size_t len, FILE *fo)
 #if 0
   else if (data[0]=='P' && data[1]=='X' && data[2]=='2' && data[3]=='0') {
     if ((len-2) & 0x03) {
-      /*fprintf(stderr, "(file length - 2) is not a multiple of 4\n");*/
+      /*D_(D_CRIT "(file length - 2) is not a multiple of 4\n");*/
       return -1;
     }
     crypted = 1;
   }
 #endif
   else {
-    /*fprintf(stderr, "File does not have the PP signature\n");*/
+    /*D_(D_CRIT "File does not have the PP signature\n");*/
     return -1;
   }
 
   outlen = readmem24b(data + len - 4);
 
-  /* fprintf(stderr, "decrunched length = %u bytes\n", outlen); */
+  /* D_(D_CRIT "decrunched length = %u bytes\n", outlen); */
 
   output = (uint8 *) malloc(outlen);
   if (output == NULL) {
-    /*fprintf(stderr, "out of memory!\n");*/
+    /*D_(D_CRIT "out of memory!\n");*/
     return -1;
   }
 
   /* if (crypted == 0) { */
-    /*fprintf(stderr, "not encrypted, decrunching anyway\n"); */
+    /*D_(D_CRIT "not encrypted, decrunching anyway\n"); */
     if (ppDecrunch(&data[8], output, &data[4], len-12, outlen, data[len-1])) {
-      /* fprintf(stderr, "Decrunch successful! "); */
+      /* D_(D_CRIT "Decrunch successful! "); */
       savefile(fo, (void *) output, outlen);
     } else {
       success=-1;
@@ -187,8 +187,7 @@ static int decrunch_pp(FILE *f, FILE *fo)
     if (fstat(fileno(f), &st) < 0)
 	goto err;
 
-    plen = st.st_size;
-    //counter = 0;
+	plen = st.st_size;
 
     /* Amiga longwords are only on even addresses.
      * The pp20 data format has the length stored in a longword
@@ -198,13 +197,13 @@ static int decrunch_pp(FILE *f, FILE *fo)
      */
 
     if ((plen != (plen / 2) * 2)) {    
-	 /*fprintf(stderr, "filesize not even\n");*/
+	 /*D_(D_CRIT "filesize not even\n");*/
          goto err;
     }
 
     packed = malloc(plen);
     if (packed == NULL) {
-	 /*fprintf(stderr, "can't allocate memory for packed data\n");*/
+	 /*D_(D_CRIT "can't allocate memory for packed data\n");*/
 	 goto err;
     }
 
@@ -223,24 +222,24 @@ static int decrunch_pp(FILE *f, FILE *fo)
      */	 
 
     if (((packed[4] < 9) || (packed[5] < 9) || (packed[6] < 9) || (packed[7] < 9))) {
-	 /*fprintf(stderr, "invalid efficiency\n");*/
+	 /*D_(D_CRIT "invalid efficiency\n");*/
          goto err1;
     }
 
 
     if (((readmem24b(packed +4)  * 256  + packed[7]) & 0xf0f0f0f0) != 0 ) {
-	 /*fprintf(stderr, "invalid efficiency(?)\n");*/
+	 /*D_(D_CRIT "invalid efficiency(?)\n");*/
          goto err1;
     }
 
     unplen = readmem24b(packed + plen - 4);
     if (!unplen) {
-	 /*fprintf(stderr, "not a powerpacked file\n");*/
+	 /*D_(D_CRIT "not a powerpacked file\n");*/
          goto err1;
     }
     
     if (ppdepack (packed, plen, fo) == -1) {
-	 /*fprintf(stderr, "error while decrunching data...");*/
+	 /*D_(D_CRIT "error while decrunching data...");*/
          goto err1;
     }
      

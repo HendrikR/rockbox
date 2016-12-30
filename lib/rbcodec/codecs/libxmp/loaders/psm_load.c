@@ -35,7 +35,7 @@ const struct format_loader psm_loader = {
 	psm_load
 };
 
-static int psm_test(HIO_HANDLE *f, char *t, const int start)
+static int psm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_PSM_)
 		return -1;
@@ -48,7 +48,7 @@ static int psm_test(HIO_HANDLE *f, char *t, const int start)
 
 /* FIXME: effects translation */
 
-static int psm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int psm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int c, r, i;

@@ -24,10 +24,10 @@
 #include <sys/types.h>
 #include <stdarg.h>
 #ifndef WIN32
-#include <dirent.h>
+//#include <dirent.h>
 #endif
 
-#include "xmp.h"
+#include "libxmp/xmp.h"
 #include "libxmp/common.h"
 #include "libxmp/period.h"
 #include "libxmp/loaders/loader.h"
@@ -92,13 +92,17 @@ int track_alloc(struct xmp_module *mod, int num, int rows)
 {
 	/* Sanity check */
 	if (num < 0 || num >= mod->trk || mod->xxt[num] != NULL || rows <= 0)
+	{
+		D_(D_INFO "sanity fail: %d, %d, %d, %d", num, mod->trk, mod->xxt[num], rows);
 		return -1;
+	}
 
 	mod->xxt[num] = calloc(sizeof (struct xmp_track) +
 			       sizeof (struct xmp_event) * (rows - 1), 1);
-	if (mod->xxt[num] == NULL)
+	if (mod->xxt[num] == NULL) {
+		D_(D_INFO "alloc fail");
 		return -1;
-
+	}
 	mod->xxt[num]->rows = rows;
 
 	return 0;
@@ -108,7 +112,6 @@ int tracks_in_pattern_alloc(struct xmp_module *mod, int num)
 {
 	int i;
 
-	D_(D_INFO "Alloc %d tracks of %d rows", mod->chn, mod->xxp[num]->rows);
 	for (i = 0; i < mod->chn; i++) {
 		int t = num * mod->chn + i;
 		int rows = mod->xxp[num]->rows;
@@ -295,9 +298,12 @@ void disable_continue_fx(struct xmp_event *event)
 
 /* Given a directory, see if file exists there, ignoring case */
 
-int check_filename_case(char *dir, char *name, char *new_name, int size)
+int check_filename_case(char* UNUSED(dir), char* UNUSED(name), char* UNUSED(new_name), int UNUSED(size))
 {
+	// TODO(HR): either reactivate the code below or get totally rid of file handling.
 	int found = 0;
+	return 1;
+/*
 	DIR *dirfd;
 	struct dirent *d;
 
@@ -318,6 +324,7 @@ int check_filename_case(char *dir, char *name, char *new_name, int size)
 	closedir(dirfd);
 
 	return found;
+*/
 }
 
 #else

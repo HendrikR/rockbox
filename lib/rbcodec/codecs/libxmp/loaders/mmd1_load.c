@@ -37,7 +37,7 @@ const struct format_loader mmd1_loader = {
 	mmd1_load
 };
 
-static int mmd1_test(HIO_HANDLE *f, char *t, const int start)
+static int mmd1_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char id[4];
 	uint32 offset, len;
@@ -67,7 +67,7 @@ static int mmd1_test(HIO_HANDLE *f, char *t, const int start)
 /* Number of octaves in IFFOCT samples */
 static const int num_oct[6] = { 5, 3, 2, 4, 6, 7 };
 
-static int mmd1_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mmd1_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, k;

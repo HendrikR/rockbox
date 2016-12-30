@@ -16,7 +16,7 @@
 #include <proto/xfdmaster.h>
 #include <exec/types.h>
 #include <stdio.h>
-#include <sys/stat.h>
+
 
 struct local_data {
 	struct Library *xfdMasterBase;

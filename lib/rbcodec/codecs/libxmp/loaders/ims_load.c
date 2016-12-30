@@ -74,7 +74,7 @@ const struct format_loader ims_loader = {
     ims_load
 };
 
-static int ims_test(HIO_HANDLE *f, char *t, const int start)
+static int ims_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     int i;
     int smp_size, pat;
@@ -145,7 +145,7 @@ static int ims_test(HIO_HANDLE *f, char *t, const int start)
 }
 
 
-static int ims_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int ims_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j;

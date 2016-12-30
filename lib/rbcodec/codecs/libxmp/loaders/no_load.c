@@ -37,7 +37,7 @@ const struct format_loader no_loader = {
 	no_load
 };
 
-static int no_test(HIO_HANDLE *f, char *t, const int start)
+static int no_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	int nsize, pat, chn;
 	int i;
@@ -98,7 +98,7 @@ static const uint8 fx[] = {
 };
 
 
-static int no_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int no_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

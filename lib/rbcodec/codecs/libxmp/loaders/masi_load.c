@@ -84,7 +84,7 @@ const struct format_loader masi_loader = {
 	masi_load
 };
 
-static int masi_test(HIO_HANDLE *f, char *t, const int start)
+static int masi_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	int val;
 
@@ -122,12 +122,12 @@ struct local_data {
 	uint8 *pord;
 };
 
-static int get_sdft(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_sdft(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	return 0;
 }
 
-static int get_titl(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_titl(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	char buf[40];
@@ -138,7 +138,7 @@ static int get_titl(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_dsmp_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_dsmp_cnt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -148,7 +148,7 @@ static int get_dsmp_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *pa
 	return 0;
 }
 
-static int get_pbod_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_pbod_cnt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -163,7 +163,7 @@ static int get_pbod_cnt(struct module_data *m, int size, HIO_HANDLE *f, void *pa
 }
 
 
-static int get_dsmp(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_dsmp(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_instrument *xxi;
@@ -237,7 +237,7 @@ static int get_dsmp(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 }
 
 
-static int get_pbod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_pbod(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -392,7 +392,7 @@ D_(D_CRIT "p%d r%d c%d: unknown effect %02x %02x\n", i, r, chan, fxt, fxp);
 	return 0;
 }
 
-static int get_song(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_song(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -402,7 +402,7 @@ static int get_song(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_song_2(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_song_2(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -459,7 +459,7 @@ static int get_song_2(struct module_data *m, int size, HIO_HANDLE *f, void *parm
 	return 0;
 }
 
-static int masi_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int masi_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	iff_handle handle;

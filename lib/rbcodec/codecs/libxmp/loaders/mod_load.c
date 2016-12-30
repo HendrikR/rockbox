@@ -109,7 +109,7 @@ static int validate_pattern(uint8 *buf)
 	return 0;
 }
 
-static int mod_test(HIO_HANDLE * f, char *t, const int start)
+static int mod_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	int i;
 	char buf[4];
@@ -374,7 +374,7 @@ static int get_tracker_id(struct module_data *m, struct mod_header *mh, int id)
 	return id;
 }
 
-static int mod_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mod_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j;

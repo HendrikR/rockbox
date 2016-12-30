@@ -94,7 +94,7 @@ const struct format_loader liq_loader = {
     liq_load
 };
 
-static int liq_test(HIO_HANDLE *f, char *t, const int start)
+static int liq_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     char buf[15];
 
@@ -229,7 +229,7 @@ static int decode_event(uint8 x1, struct xmp_event *event, HIO_HANDLE *f)
     return 0;
 }
 
-static int liq_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int liq_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i;

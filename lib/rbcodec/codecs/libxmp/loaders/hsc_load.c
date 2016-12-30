@@ -41,7 +41,7 @@ const struct format_loader hsc_loader = {
     hsc_load
 };
 
-static int hsc_test(HIO_HANDLE *f, char *t, const int start)
+static int hsc_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     int p, i, r, c;
     uint8 buf[1200];
@@ -79,7 +79,7 @@ static int hsc_test(HIO_HANDLE *f, char *t, const int start)
     return 0;
 }
 
-static int hsc_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int hsc_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int pat, i, r, c;

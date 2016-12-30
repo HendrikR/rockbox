@@ -33,7 +33,7 @@ const struct format_loader flt_loader = {
 	flt_load
 };
 
-static int flt_test(HIO_HANDLE * f, char *t, const int start)
+static int flt_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	char buf[4];
 
@@ -287,7 +287,7 @@ static int read_am_instrument(struct module_data *m, HIO_HANDLE *nt, int i)
 	return 0;
 }
 
-static int flt_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int flt_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

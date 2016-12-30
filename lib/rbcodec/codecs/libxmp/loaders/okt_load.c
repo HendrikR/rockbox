@@ -37,7 +37,7 @@ const struct format_loader okt_loader = {
 	okt_load
 };
 
-static int okt_test(HIO_HANDLE *f, char *t, const int start)
+static int okt_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char magic[8];
 
@@ -100,7 +100,7 @@ static const int fx[] = {
 	FX_VOLSET		/* 31 */
 };
 
-static int get_cmod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_cmod(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -124,7 +124,7 @@ static int get_cmod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_samp(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_samp(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -179,7 +179,7 @@ static int get_samp(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_spee(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_spee(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -189,7 +189,7 @@ static int get_spee(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_slen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_slen(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -199,7 +199,7 @@ static int get_slen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_plen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_plen(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -214,7 +214,7 @@ static int get_plen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -224,7 +224,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_pbod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_pbod(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -292,7 +292,7 @@ static int get_pbod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_sbod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_sbod(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -317,7 +317,7 @@ static int get_sbod(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int okt_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int okt_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	iff_handle handle;
 	struct local_data data;

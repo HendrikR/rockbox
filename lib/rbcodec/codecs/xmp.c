@@ -50,17 +50,20 @@ enum codec_status codec_run(void) {
     ctx = xmp_create_context();
     
     filename = ci->id3->path;
-    if (xmp_load_module(ctx, filename) < 0) {
-	LOGF("loading file %s failed.\n", filename);
+
+    size_t realsize;
+    void* buf = ci->request_buffer(&realsize, 0x7FFFFFFF);
+    int err = xmp_load_module_from_memory(ctx, buf, realsize);
+    if (err < 0) {
+	LOGF("loading file %s (%d / %ld bytes) failed with errno %d.\n", filename, realsize, ci->filesize, err);
 	return CODEC_ERROR;
     }
-    
+
     xmp_get_module_info(ctx, &mod_info);
     xmp_get_frame_info(ctx, &info);
-    DEBUGF("now playing: %s, type %s, length %d seconds\n",
+    LOGF("now playing: %s, type %s, length %d seconds\n",
 	   mod_info.mod->name, mod_info.mod->type, info.total_time / 1000);
     /* TODO: set metadata in metadata/xmp.c*/
-    
     
     xmp_start_player(ctx, 44100, 0);
     /* TODO: set stereo separation from rockbox config. other things might also be configurable. */
@@ -74,7 +77,7 @@ enum codec_status codec_run(void) {
     ci->id3->comment = mod_info.comment;
     ci->id3->frequency = 44100;
     ci->id3->length = info.total_time;
-    /* TODO: ci->id3->bitrate = 8000*ci->id3->filesize / ci->id3->length; or something like that */
+    ci->id3->bitrate = 8000*ci->filesize / ci->id3->length;
     ci->id3->elapsed = 0;
     /* TODO: id3->samples, id3->frame_count, id3->bytesperframe */
     ci->id3->vbr = false;

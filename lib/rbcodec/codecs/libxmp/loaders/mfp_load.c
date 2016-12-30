@@ -28,13 +28,13 @@
 
 #include "libxmp/loaders/loader.h"
 #include <sys/types.h>
-#include <sys/stat.h>
+//
 #ifdef __native_client__
 #include <sys/syslimits.h>
 #else
 #include <limits.h>
 #endif
-#include <unistd.h>
+//
 
 static int mfp_test(HIO_HANDLE *, char *, const int);
 static int mfp_load(struct module_data *, HIO_HANDLE *, const int);
@@ -45,7 +45,7 @@ const struct format_loader mfp_loader = {
 	mfp_load
 };
 
-static int mfp_test(HIO_HANDLE *f, char *t, const int start)
+static int mfp_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	uint8 buf[384];
 	int i, len, lps, lsz;
@@ -99,7 +99,7 @@ static int mfp_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int mfp_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int mfp_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, k, x, y;
@@ -208,7 +208,7 @@ static int mfp_load(struct module_data *m, HIO_HANDLE *f, const int start)
 
 	/* first check smp.filename */
 	if (strlen(m->basename) < 5 || m->basename[3] != '.') {
-		fprintf(stderr, "libxmp: invalid filename %s\n", m->basename);
+		D_(D_CRIT "libxmp: invalid filename %s\n", m->basename);
 		goto err;
 	}
 
@@ -216,6 +216,7 @@ static int mfp_load(struct module_data *m, HIO_HANDLE *f, const int start)
 	m->basename[1] = 'm';
 	m->basename[2] = 'p';
 	snprintf(smp_filename, PATH_MAX, "%s%s", m->dirname, m->basename);
+
 	if (stat(smp_filename, &st) < 0) {
 		/* handle .set filenames like in Kid Chaos*/
 		char *x;
@@ -224,13 +225,14 @@ static int mfp_load(struct module_data *m, HIO_HANDLE *f, const int start)
 				strcpy(x, ".set");
 		}
 		if (stat(smp_filename, &st) < 0) {
-			fprintf(stderr, "libxmp: missing file %s\n",
+			D_(D_CRIT "libxmp: missing file %s\n",
 								smp_filename);
 			goto err;
 		}
 	}
+
 	if ((s = hio_open(smp_filename, "rb")) == NULL) {
-		fprintf(stderr, "libxmp: can't open sample file %s\n",
+		D_(D_CRIT "libxmp: can't open sample file %s\n",
 								smp_filename);
 		goto err;
 	}

@@ -29,6 +29,7 @@
 #else
 #include <limits.h>
 #endif
+
 #include "libxmp/period.h"
 #include "libxmp/loaders/loader.h"
 
@@ -44,7 +45,7 @@ const struct format_loader med2_loader = {
 };
 
 
-static int med2_test(HIO_HANDLE *f, char *t, const int start)
+static int med2_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) !=  MAGIC_MED2)
 		return -1;
@@ -55,7 +56,7 @@ static int med2_test(HIO_HANDLE *f, char *t, const int start)
 }
 
 
-int med2_load(struct module_data *m, HIO_HANDLE *f, const int start)
+int med2_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, k;

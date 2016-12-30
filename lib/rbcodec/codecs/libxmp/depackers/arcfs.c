@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/types.h>
-#include <unistd.h>
+
 #include "libxmp/common.h"
 #include "libxmp/depacker.h"
 #include "readrle.h"

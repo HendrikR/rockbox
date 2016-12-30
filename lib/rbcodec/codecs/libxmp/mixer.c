@@ -308,7 +308,7 @@ static void set_sample_end(struct context_data *ctx, int voc, int end)
 	struct mixer_voice *vi = &p->virt.voice_array[voc];
 	struct channel_data *xc;
 
-	if ((uint32)voc >= p->virt.maxvoc)
+	if ((uint32)voc >= (uint32)(p->virt.maxvoc))
 		return;
 
 	xc = &p->xc_data[vi->chn];
@@ -405,9 +405,11 @@ void mixer_softmixer(struct context_data *ctx)
 		}
 
 		if (vi->smp < mod->smp) {
-			xxs = &mod->xxs[vi->smp];
+			xxs = get_sample(ctx, vi->smp);
+			//xxs = &mod->xxs[vi->smp];
 		} else {
-			xxs = &ctx->smix.xxs[vi->smp - mod->smp];
+			xxs = get_sample(ctx, vi->smp - mod->smp);
+			//xxs = &ctx->smix.xxs[vi->smp - mod->smp];
 		}
 
 		lps = xxs->lps;
@@ -426,7 +428,7 @@ void mixer_softmixer(struct context_data *ctx)
 
 			/* How many samples we can write before the loop break
 			 * or sample end... */
-			if (vi->pos >= vi->end) {
+			if (vi->pos >= (uint32)vi->end) {
 				samples = 0;
 			} else {
 				int64 s = 1 + (((int64)(vi->end - vi->pos) <<
@@ -595,7 +597,7 @@ int mixer_getvoicepos(struct context_data *ctx, int voc)
 	}
 
 	if (xxs->flg & XMP_SAMPLE_LOOP_BIDIR) {
-		if (vi->pos >= xxs->lpe) {
+		if (vi->pos >= (uint32)xxs->lpe) {
 			return xxs->lpe - (vi->pos - xxs->lpe) - 1;
 		}
 	}

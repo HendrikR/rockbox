@@ -31,8 +31,8 @@
 
 #include "libxmp/loaders/loader.h"
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+//
+//
 
 
 static int alm_test (HIO_HANDLE *, char *, const int);
@@ -44,7 +44,7 @@ const struct format_loader alm_loader = {
     alm_load
 };
 
-static int alm_test(HIO_HANDLE *f, char *t, const int start)
+static int alm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
     char buf[7];
 
@@ -74,7 +74,7 @@ struct alm_file_header {
 
 #define NAME_SIZE 255
 
-static int alm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int alm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
     struct xmp_module *mod = &m->mod;
     int i, j;

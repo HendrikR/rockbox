@@ -23,7 +23,7 @@ const struct format_loader hvl_loader = {
 	hvl_load
 };
 
-static int hvl_test(HIO_HANDLE *f, char *t, const int start)
+static int hvl_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_HVL)
 		return -1;
@@ -176,7 +176,7 @@ static void fix_effect (uint8 *fx, uint8 *param) {
 	}
 }
 
-static int hvl_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int hvl_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct player_data *p = &ctx->p;
 	struct xmp_module *mod = &m->mod;

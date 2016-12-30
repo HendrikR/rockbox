@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "readrle.h"
+#include "libxmp/common.h"
 
 #include "readhuff.h"
 
@@ -78,8 +79,10 @@ struct bits bits;
 struct rledata rd;
 struct data_in_out io;
 
-if((data_out=malloc(orig_len))==NULL)
-  fprintf(stderr,"nomarch: out of memory!\n"),exit(1);
+if((data_out=malloc(orig_len))==NULL) {
+    D_(D_CRIT "nomarch: out of memory!\n");
+    exit(1);
+}
 
 io.data_in_point=data_in; io.data_in_max=data_in+in_len;
 io.data_out_point=data_out; io.data_out_max=data_out+orig_len;
@@ -92,8 +95,10 @@ if(!nodes)
   return(NULL);
   }
 
-if((nodearr=malloc(sizeof(struct huff_node_tag)*nodes))==NULL)
-  fprintf(stderr,"nomarch: out of memory!\n"),exit(1);
+if((nodearr=malloc(sizeof(struct huff_node_tag)*nodes))==NULL) {
+    D_(D_CRIT "nomarch: out of memory!\n");
+    exit(1);
+}
 
 /* apparently the tree can be empty (zero-length file?), so
  * there's a preset entry which is required. In the context of

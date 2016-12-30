@@ -37,7 +37,7 @@ const struct format_loader emod_loader = {
 	emod_load
 };
 
-static int emod_test(HIO_HANDLE * f, char *t, const int start)
+static int emod_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_FORM)
 		return -1;
@@ -58,7 +58,7 @@ static int emod_test(HIO_HANDLE * f, char *t, const int start)
 	return 0;
 }
 
-static int get_emic(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
+static int get_emic(struct module_data *m, int UNUSED(size), HIO_HANDLE * f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, ver;
@@ -138,7 +138,7 @@ static int get_emic(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE * f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;
@@ -180,7 +180,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
 	return 0;
 }
 
-static int get_8smp(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
+static int get_8smp(struct module_data *m, int UNUSED(size), HIO_HANDLE * f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i;
@@ -195,7 +195,7 @@ static int get_8smp(struct module_data *m, int size, HIO_HANDLE * f, void *parm)
 	return 0;
 }
 
-static int emod_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int emod_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	iff_handle handle;
 	int ret;

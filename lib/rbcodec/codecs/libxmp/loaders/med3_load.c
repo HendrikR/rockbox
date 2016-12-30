@@ -40,7 +40,7 @@ const struct format_loader med3_loader = {
 	med3_load
 };
 
-static int med3_test(HIO_HANDLE *f, char *t, const int start)
+static int med3_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) !=  MAGIC_MED3)
 		return -1;
@@ -231,7 +231,7 @@ static int unpack_block(struct module_data *m, uint16 bnum, uint8 *from, uint16 
 }
 
 
-static int med3_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int med3_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

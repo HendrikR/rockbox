@@ -45,7 +45,7 @@ static const int period[] = {
 	-1
 };
 
-static int st_test(HIO_HANDLE *f, char *t, const int start)
+static int st_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	int i, j, k;
 	int pat, ins, smp_size;
@@ -183,7 +183,7 @@ static int st_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int st_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int st_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

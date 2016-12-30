@@ -14,10 +14,10 @@ Michael Kohn <mike@mikekohn.net>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
+
 #include <sys/types.h>
 #include <time.h>
-#include <unistd.h>
+
 #include "libxmp/common.h"
 #include "libxmp/depacker.h"
 #include "inflate.h"
@@ -193,7 +193,7 @@ struct inflate_data data;
 
     if (checksum!=header.crc_32)
     {
-      /* fprintf(stderr, "unzip: crc error: %d %d\n",checksum,header.crc_32); */
+      /* D_(D_CRIT "unzip: crc error: %d %d\n",checksum,header.crc_32); */
       ret_code=-4;
     }
   }

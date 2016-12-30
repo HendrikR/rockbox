@@ -78,7 +78,8 @@ static struct depacker *depacker_list[] = {
 
 int test_oxm		(FILE *);
 
-#define BUFLEN 16384
+//#define BUFLEN 16384
+#define BUFLEN 1024
 
 static int execute_command(char *cmd, char *filename, FILE *t)
 {

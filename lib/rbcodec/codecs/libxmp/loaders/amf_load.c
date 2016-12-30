@@ -42,7 +42,7 @@ const struct format_loader amf_loader = {
 	amf_load
 };
 
-static int amf_test(HIO_HANDLE * f, char *t, const int start)
+static int amf_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	char buf[4];
 	int ver;
@@ -63,7 +63,7 @@ static int amf_test(HIO_HANDLE * f, char *t, const int start)
 }
 
 
-static int amf_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int amf_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j;

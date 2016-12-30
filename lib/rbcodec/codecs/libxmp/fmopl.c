@@ -1,3 +1,4 @@
+#include "rockbox_xmp.h"
 /*
 **
 ** File: fmopl.c -- software implementation of FM sound generator

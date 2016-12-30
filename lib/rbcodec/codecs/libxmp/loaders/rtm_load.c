@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 
+#include <string.h>
 #include "libxmp/loaders/loader.h"
 #include "libxmp/period.h"
 
@@ -135,7 +136,7 @@ const struct format_loader rtm_loader = {
 	rtm_load
 };
 
-static int rtm_test(HIO_HANDLE *f, char *t, const int start)
+static int rtm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[4];
 
@@ -178,7 +179,7 @@ static int read_object_header(HIO_HANDLE *f, struct ObjectHeader *h, char *id)
 }
 
 
-static int rtm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int rtm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, r;

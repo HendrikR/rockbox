@@ -92,7 +92,7 @@ const struct format_loader s3m_loader = {
 	s3m_load
 };
 
-static int s3m_test(HIO_HANDLE *f, char *t, const int start)
+static int s3m_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	hio_seek(f, start + 44, SEEK_SET);
 	if (hio_read32b(f) != MAGIC_SCRM)
@@ -220,7 +220,7 @@ static void xlat_fx(int c, struct xmp_event *e)
 	}
 }
 
-static int s3m_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int s3m_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int c, r, i;

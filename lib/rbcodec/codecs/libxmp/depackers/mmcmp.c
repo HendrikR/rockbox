@@ -24,7 +24,7 @@
  */
 
 #include <stdlib.h>
-#include <unistd.h>
+
 #include <string.h>
 #include "libxmp/common.h"
 #include "libxmp/depacker.h"

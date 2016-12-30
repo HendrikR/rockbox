@@ -7,6 +7,7 @@
 
 #ifndef STB_VORBIS_NO_STDIO
 #include <stdio.h>
+#include "libxmp/rockbox_xmp.h"
 #endif
 
 #ifdef __cplusplus

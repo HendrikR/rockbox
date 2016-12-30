@@ -77,7 +77,7 @@ const struct format_loader ptm_loader = {
 	ptm_load
 };
 
-static int ptm_test(HIO_HANDLE *f, char *t, const int start)
+static int ptm_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	hio_seek(f, start + 44, SEEK_SET);
 	if (hio_read32b(f) != MAGIC_PTMF)
@@ -97,7 +97,7 @@ static const int ptm_vol[] = {
 	62, 63, 63, 64, 64
 };
 
-static int ptm_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int ptm_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int c, r, i, smp_ofs[256];

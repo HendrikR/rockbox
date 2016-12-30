@@ -56,7 +56,7 @@ static void decode_rle(uint8 *out, HIO_HANDLE *f, int size)
 	}
 }
 
-static int polly_test(HIO_HANDLE *f, char *t, const int start)
+static int polly_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	int i;
 	uint8 *buf;
@@ -93,7 +93,7 @@ static int polly_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int polly_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int polly_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;

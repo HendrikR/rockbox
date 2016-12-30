@@ -68,7 +68,7 @@ static uint8 convert_vol(uint8 vol) {
 }
 #endif
 
-static int arch_test(HIO_HANDLE *f, char *t, const int start)
+static int arch_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_MUSX) {
 		return -1;
@@ -173,7 +173,7 @@ static void fix_effect(struct xmp_event *e)
 	}
 }
 
-static int get_tinf(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_tinf(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct local_data *data = (struct local_data *)parm;
 	int x;
@@ -192,7 +192,7 @@ static int get_tinf(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_mvox(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_mvox(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -206,7 +206,7 @@ static int get_mvox(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_ster(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_ster(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -225,7 +225,7 @@ static int get_ster(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_mnam(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_mnam(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -235,14 +235,14 @@ static int get_mnam(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_anam(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_anam(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	/*hio_read(m->author, 1, 32, f); */
 
 	return 0;
 }
 
-static int get_mlen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_mlen(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -255,7 +255,7 @@ static int get_mlen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_pnum(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_pnum(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -268,7 +268,7 @@ static int get_pnum(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_plen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_plen(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct local_data *data = (struct local_data *)parm;
 
@@ -278,7 +278,7 @@ static int get_plen(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_sequ(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_sequ(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 
@@ -289,7 +289,7 @@ static int get_sequ(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -336,7 +336,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_samp(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_samp(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -438,7 +438,7 @@ static int get_samp(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int arch_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int arch_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	iff_handle handle;

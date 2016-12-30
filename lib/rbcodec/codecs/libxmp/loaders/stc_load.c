@@ -36,7 +36,7 @@ struct stc_pat {
 	int ch[3];
 };
 
-static int stc_test(HIO_HANDLE * f, char *t, const int start)
+static int stc_test(HIO_HANDLE * f, char *t, const int UNUSED(start))
 {
 	int pos_ptr, orn_ptr, pat_ptr;
 	int i, len, max_pat;
@@ -85,7 +85,7 @@ static int stc_test(HIO_HANDLE * f, char *t, const int start)
 	return 0;
 }
 
-static int stc_load(struct module_data *m, HIO_HANDLE * f, const int start)
+static int stc_load(struct module_data *m, HIO_HANDLE * f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event /*, *noise*/;

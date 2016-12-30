@@ -38,7 +38,7 @@ const struct format_loader dt_loader = {
 	dt_load
 };
 
-static int dt_test(HIO_HANDLE *f, char *t, const int start)
+static int dt_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_D_T_)
 		return -1;
@@ -65,7 +65,7 @@ struct local_data {
 };
 
 
-static int get_d_t_(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_d_t_(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int b;
@@ -86,7 +86,7 @@ static int get_d_t_(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_s_q_(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_s_q_(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, maxpat;
@@ -116,7 +116,7 @@ static int get_s_q_(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_patt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -128,7 +128,7 @@ static int get_patt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_inst(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_inst(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, c2spd;
@@ -195,7 +195,7 @@ static int get_inst(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_dapt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_dapt(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -253,7 +253,7 @@ static int get_dapt(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int get_dait(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
+static int get_dait(struct module_data *m, int UNUSED(size), HIO_HANDLE *f, void* UNUSED(parm))
 {
 	struct xmp_module *mod = &m->mod;
 	struct local_data *data = (struct local_data *)parm;
@@ -284,7 +284,7 @@ static int get_dait(struct module_data *m, int size, HIO_HANDLE *f, void *parm)
 	return 0;
 }
 
-static int dt_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int dt_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	iff_handle handle;
 	struct local_data data;

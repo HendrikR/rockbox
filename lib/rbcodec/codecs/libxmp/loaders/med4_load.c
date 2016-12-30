@@ -43,7 +43,7 @@ const struct format_loader med4_loader = {
 	med4_load
 };
 
-static int med4_test(HIO_HANDLE *f, char *t, const int start)
+static int med4_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	if (hio_read32b(f) != MAGIC_MED4)
 		return -1;
@@ -166,7 +166,7 @@ struct temp_inst {
 	int transpose;
 };
 
-static int med4_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int med4_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	int i, j, k, y;
@@ -339,7 +339,7 @@ static int med4_load(struct module_data *m, HIO_HANDLE *f, const int start)
 	}
 
 	for (i = 0; i < mod->pat; i++) {
-		int size, plen, chn;
+		int UNUSED(size), plen, chn;
 
 		size = hio_read8(f);	/* pattern control block */
 		chn = hio_read8(f);
@@ -367,7 +367,7 @@ static int med4_load(struct module_data *m, HIO_HANDLE *f, const int start)
 	D_(D_INFO "Stored patterns: %d", mod->pat);
 
 	for (i = 0; i < mod->pat; i++) {
-		int size, plen, rows;
+		int UNUSED(size), plen, rows;
 		uint8 ctl[4], chn;
 		unsigned chmsk;
 		uint32 linemask[8], fxmask[8], x;

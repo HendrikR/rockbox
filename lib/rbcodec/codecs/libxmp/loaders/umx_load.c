@@ -43,7 +43,7 @@ const struct format_loader umx_loader = {
 	umx_load
 };
 
-static int umx_test(HIO_HANDLE *f, char *t, const int start)
+static int umx_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	int i, offset = -1;
 	uint8 buf[TEST_SIZE], *b = buf;
@@ -84,7 +84,7 @@ static int umx_test(HIO_HANDLE *f, char *t, const int start)
 	return 0;
 }
 
-static int umx_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int umx_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	int i;
 	uint8 buf[TEST_SIZE], *b = buf;

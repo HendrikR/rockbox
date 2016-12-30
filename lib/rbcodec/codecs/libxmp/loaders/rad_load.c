@@ -32,7 +32,7 @@ const struct format_loader rad_loader = {
 	rad_load
 };
 
-static int rad_test(HIO_HANDLE *f, char *t, const int start)
+static int rad_test(HIO_HANDLE *f, char *t, const int UNUSED(start))
 {
 	char buf[16];
 
@@ -53,7 +53,7 @@ struct rad_instrument {
 };
 
 
-static int rad_load(struct module_data *m, HIO_HANDLE *f, const int start)
+static int rad_load(struct module_data *m, HIO_HANDLE *f, const int UNUSED(start))
 {
 	struct xmp_module *mod = &m->mod;
 	struct xmp_event *event;
