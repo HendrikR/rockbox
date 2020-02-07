@@ -44,6 +44,7 @@ enum {
     MODEL_CLIPPLUS,
     MODEL_FUZEV2,
     MODEL_CLIPZIP,
+    MODEL_CLIPSPORT,
     /* new models go here */
 
     NUM_MODELS

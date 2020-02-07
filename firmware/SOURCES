@@ -1500,6 +1500,16 @@ target/arm/as3525/sansa-clipzip/powermgmt-clipzip.c
 #endif /* !BOOTLOADER */
 #endif /* SANSA_CLIPZIP */
 
+#ifdef SANSA_CLIPSPORT
+#pragma message "  ...oooOOO DIES IST EIN clipsport  OOOooo...  "
+target/arm/as3525/sansa-clipsport/lcd-clipsport.c
+target/arm/as3525/sansa-clipsport/button-clipsport.c
+target/arm/as3525/sansa-clipsport/backlight-clipsport.c
+#ifndef BOOTLOADER
+target/arm/as3525/sansa-clipsport/powermgmt-clipsport.c
+#endif /* !BOOTLOADER */
+#endif /* SANSA_CLIPSPORT */
+
 #ifdef IAUDIO_7
 drivers/nand_id.c
 drivers/pcf50606.c

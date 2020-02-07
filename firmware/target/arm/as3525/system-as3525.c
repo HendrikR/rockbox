@@ -241,7 +241,8 @@ static void check_model_variant(void)
     c200v2_variant = !GPIOA_PIN(7);
     GPIOA_DIR = saved_dir;
 }
-#elif defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP)
+#elif defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP) \
+      || defined(SANSA_CLIPSPORT)
 int amsv2_variant;
 
 static void check_model_variant(void)
@@ -519,7 +520,7 @@ void set_cpu_frequency(long frequency)
 
         /* Set CVDD1 power supply */
 #ifdef HAVE_ADJUSTABLE_CPU_VOLTAGE
-#if defined(SANSA_CLIPZIP)
+#if defined(SANSA_CLIPZIP) || defined(SANSA_CLIPSPORT)
         ascodec_write_pmu(0x17, 1, 0x80 | 20);
 #elif defined(SANSA_CLIPPLUS)
         if (amsv2_variant)

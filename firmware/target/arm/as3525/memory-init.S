@@ -31,7 +31,7 @@
 
 #elif defined(SANSA_E200V2) || defined(SANSA_FUZE) || defined(SANSA_CLIPV2) \
     || defined(SANSA_CLIPPLUS) || defined(SANSA_FUZEV2) \
-    || defined(SANSA_CLIPZIP)
+    || defined(SANSA_CLIPZIP) ||defined(SANSA_CLIPSPORT)
 /* 16 bits external bus, high performance SDRAM, 64 Mbits = 8 Mbytes */
 #define MEMORY_MODEL 0x5
 

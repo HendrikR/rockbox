@@ -269,7 +269,7 @@ simcc () {
  LDOPTS="$LDOPTS -lm" # button-sdl.c uses sqrt()
  sigaltstack=""
  fibers=""
- endian="" # endianess of the dap doesnt matter here
+ endian="" # endianness of the dap doesn't matter here
 
  # default output binary name, don't override app_get_platform()
  if [ "$app_type" != "sdl-app" ]; then
@@ -1477,7 +1477,7 @@ cat <<EOF
  ==Onda==                 ==Tatung==             64) Sansa Fuze+
  120) VX747               150) Elio TPJ-1022     65) Sansa Clip Zip
  121) VX767                                      66) Sansa Connect
- 122) VX747+              ==Packard Bell==
+ 122) VX747+              ==Packard Bell==       67) Sansa Clip Sport
  123) VX777               160) Vibe 500          ==Logik==
                                                  80) DAX 1GB MP3/DAB
  ==Samsung==              ==MPIO==
@@ -2926,6 +2926,26 @@ fi
     t_cpu="arm"
     t_manufacturer="tms320dm320"
     t_model="sansa-connect"
+    arm926ejscc
+    ;;
+
+   67|sansaclipsport)
+    target_id=110
+    modelname="sansaclipsport"
+    target="SANSA_CLIPSPORT"
+    memory=8 # not sure
+    bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
+    bmp2rb_native="$rootdir/tools/bmp2rb -f 4"
+    tool="$rootdir/tools/scramble -add=clsp"
+    output="rockbox.sansa"
+    bootoutput="bootloader-clipsport.sansa"
+    appextra="recorder:gui:radio"
+    plugins="yes"
+    swcodec="yes"
+    toolset=$scramblebitmaptools
+    t_cpu="arm"
+    t_manufacturer="as3525"
+    t_model="sansa-clipsport"
     arm926ejscc
     ;;
 

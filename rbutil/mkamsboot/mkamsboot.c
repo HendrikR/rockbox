@@ -123,6 +123,7 @@ const struct ams_models ams_identity[] = {
     [MODEL_FUZE]    = { 1, 1, "Fuze",  dualboot_fuze,     sizeof(dualboot_fuze),     "fuze", 43 },
     [MODEL_M200V4]  = { 4, 1, "m200",  dualboot_m200v4,   sizeof(dualboot_m200v4),   "m2v4", 42 },
     [MODEL_CLIPZIP] = { 1, 2, "ClipZip", dualboot_clipzip, sizeof(dualboot_clipzip), "clzp", 79 },
+    [MODEL_CLIPSPROT]={ 1, 2, "ClipSport", dualboot_clipsport, sizeof(dualboot_clipsport), "clsp", 80 },
 };
 
 
@@ -179,6 +180,8 @@ static struct md5sums sansasums[] = {
     { MODEL_CLIPZIP, "1.01.18", "ef16aa9e02b49885ebede5aa149502e8" },
     { MODEL_CLIPZIP, "1.01.20", "d88c8977cc6a952d3f51ece105869d97" },
     { MODEL_CLIPZIP, "1.01.21", "92c814d6e3250189706a36d2b49b6152" },
+
+    { MODEL_CLIPSPORT, "?.?.?", "0123456789ABCDEF0123456789ABCDEF" },
 };
 
 #define NUM_MD5S (sizeof(sansasums)/sizeof(sansasums[0]))

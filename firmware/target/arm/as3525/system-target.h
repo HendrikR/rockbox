@@ -51,7 +51,8 @@ void kernel_device_init(void);
         ? (((uintptr_t)(a)) - IRAM_ORIG) \
         : ((uintptr_t)(a))))
 
-#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP)
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP) \
+    || defined(SANSA_CLIPSPORT)
 extern int amsv2_variant;
 #endif
 

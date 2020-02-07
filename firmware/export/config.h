@@ -505,6 +505,8 @@ Lyre prototype 1 */
 #include "config/sansafuzeplus.h"
 #elif defined(SANSA_CLIPZIP)
 #include "config/sansaclipzip.h"
+#elif defined (SANSA_CLIPSPORT)
+#include "config/sansaclipsport.h"
 #elif defined(SANSA_C200V2)
 #include "config/sansac200v2.h"
 #elif defined(SANSA_VIEW)

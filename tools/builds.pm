@@ -283,6 +283,10 @@ $releasenotes="/wiki/ReleaseNotes314";
         name => 'SanDisk Sansa Clip Zip',
         status => 3,
     },
+    'sansaclipsport' => {
+        name => 'SanDisk Sansa Clip Sport',
+        status => 1,
+    },
     'sansae200' => {
         name => 'SanDisk Sansa e200',
         status => 3,

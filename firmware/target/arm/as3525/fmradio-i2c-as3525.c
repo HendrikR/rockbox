@@ -45,7 +45,7 @@
 #define I2C_SDA_PIN 5
 
 #elif   defined(SANSA_CLIPV2) || defined(SANSA_CLIPPLUS) \
-     || defined(SANSA_CLIPZIP)
+     || defined(SANSA_CLIPZIP) ||defined(SANSA_CLIPSPORT)
 #define I2C_SCL_GPIO(x) GPIOB_PIN(x)
 #define I2C_SDA_GPIO(x) GPIOB_PIN(x)
 #define I2C_SCL_GPIO_DIR GPIOB_DIR

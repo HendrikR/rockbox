@@ -29,7 +29,7 @@
 #if (CONFIG_CPU==AS3525)
 #define SECS_ADJUST 0           /* 1970-1-1 00:00:00 */
 #elif (CONFIG_CPU==AS3525v2)
-#if defined(SANSA_CLIPZIP)
+#if defined(SANSA_CLIPZIP) || defined(SANSA_CLIPSPORT)
 #define SECS_ADJUST 0           /* 1970-1-1 00:00:00 */
 #else
 #define SECS_ADJUST ((2*365*24*3600) + 26*(24*3600) - 7*3600 - 25*60)

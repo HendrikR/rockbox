@@ -70,7 +70,7 @@ int key_to_button(int keyboard_button)
     return new_btn;
 }
 
-#ifdef SANSA_CLIPZIP
+#if defined(SANSA_CLIPZIP) || defined(SANSA_CLIPSPORT)
 struct button_map bm[] = {
     { SDLK_KP_MULTIPLY,  31, 171,  12, "Home" },
     { SDLK_KP5,          81, 211,  10, "Select" },

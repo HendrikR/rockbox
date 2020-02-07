@@ -360,6 +360,8 @@ int main (int argc, char** argv)
             modelnum = 72;
         else if (!strcmp(&argv[1][5], "clzp")) /* Sansa Clip Zip */
             modelnum = 79;
+        else if (!strcmp(&argv[1][5], "clsp")) /* Sansa Clip Sport */
+            modelnum = 80;
         else if (!strcmp(&argv[1][5], "conn")) /* Sansa Connect */
             modelnum = 81;
         else if (!strcmp(&argv[1][5], "zxf2")) /* Creative Zen X-Fi2 */

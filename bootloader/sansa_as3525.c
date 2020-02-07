@@ -97,7 +97,7 @@ void main(void)
     int btn = button_read_device();
 
 #if !defined(SANSA_FUZE) && !defined(SANSA_CLIP) && !defined(SANSA_CLIPV2) \
-    && !defined(SANSA_CLIPPLUS) && !defined(SANSA_CLIPZIP)
+    && !defined(SANSA_CLIPPLUS) && !defined(SANSA_CLIPZIP) && !defined(SANSA_CLIPSPORT)
     if (button_hold())
     {
         verbose = true;
@@ -160,7 +160,8 @@ void main(void)
 #endif
     }
 
-#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP)
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP) \
+    || defined(SANSA_CLIPSPORT)
     /* It is necessary for proper detection AMSv2 variant 1.
      * We should restore initial state of GPIOB_PIN(5) as it used for
      * variant detection, but can be changed if we switch SD card. */
